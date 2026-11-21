@@ -13,12 +13,12 @@
       "unit": "pts",
       "minScore": 0,
       "maxScore": 60000,
-      "short": "Strafe, stop with the opposite key, one-tap the head.",
-      "desc": "An enemy only appears while you are strafing at full speed. Stop with a counter-strafe (tap the opposite key) and tap the head before the window closes. Shots fired above the accuracy threshold are inaccurate and cost points, the same way running error ruins first shots in Valorant.",
+      "short": "Strafe, stop, one-tap the head before the window closes.",
+      "desc": "An enemy only appears while you are strafing at full speed. Stop and tap the head before the window closes. Shots fired above the accuracy threshold are inaccurate and cost points, the same way running error ruins first shots in Valorant. Stopping follows Riot's published timings: you're accurate about 0.11 s after releasing the key, and a counter-strafe (tapping the opposite key) is only a few milliseconds faster. What this trains is shooting the moment you're accurate, not earlier and not later.",
       "tips": [
-        "Tap the opposite key to stop. Holding it too long accelerates you the other way.",
-        "Watch the speed meter. Shots only count as accurate once the bar turns green.",
-        "Counter-strafing stops you about 2.5x faster than just releasing the key."
+        "Watch the speed meter. Shots only count as accurate once the bar turns green, about 0.1 s after you stop pressing.",
+        "In Valorant, releasing the key is almost as fast as counter-strafing (~110 ms vs ~104 ms). Use whichever you can time consistently.",
+        "If you counter-strafe, tap the opposite key. Holding it accelerates you the other way."
       ]
     },
     {
@@ -34,7 +34,7 @@
       "short": "Keep strafing and land shots at the dead point of each strafe.",
       "desc": "Shooting while strafing in Valorant means firing at the instant your velocity crosses zero between A and D. Keep moving: if you stand still the drill warns you and your hits score less. Hits at the peak of a strafe score full points, and lucky hits while moving score almost nothing.",
       "tips": [
-        "The window is tiny. Shoot as your strafe reverses, not mid-strafe.",
+        "You're accurate for only about 0.12 s per reversal. Shoot as your strafe reverses, not mid-strafe.",
         "A short release before reversing (A, release, shoot, D) is easier than pure ADAD.",
         "Keep the crosshair at head height the whole time so you only have to time the shot."
       ]
@@ -160,11 +160,11 @@
       "unit": "pts",
       "minScore": 0,
       "maxScore": 60000,
-      "short": "10 rounds: swing off cover, counter-strafe, kill, without dying.",
-      "desc": "This is a game-like 1v1 peek simulation. Enemies hold angles you can't see from behind your cover. Peek, find them, counter-strafe and kill them before their reaction time runs out. Every second you're exposed counts against you, and fast clean peeks score the most.",
+      "short": "10 rounds: swing off cover, stop, kill, without dying.",
+      "desc": "This is a game-like 1v1 peek simulation. Enemies hold angles you can't see from behind your cover. Peek, find them, stop and kill them before they out-trade you. Enemies react after a reaction time, then fire rifle taps at your 150 HP: they hit you less while you're moving or in the air, and a headshot is 160 damage. Every second you're exposed counts against you, and fast clean peeks score the most.",
       "tips": [
-        "Swing wide and fast, then counter-strafe into the shot. Being exposed while slow gets you killed.",
-        "Moving targets are harder for the enemy to hit, but you can't shoot back accurately while moving.",
+        "Swing wide and fast, then stop into the shot. Being exposed while standing still is when they hit you most.",
+        "Moving makes you harder to hit, but you can't shoot back accurately until you've stopped (about 0.1 s).",
         "Clear one side at a time. Peeking both sides at once exposes you to two angles."
       ]
     },
@@ -180,11 +180,11 @@
       "minScore": 4000,
       "maxScore": 600000,
       "short": "Time trial over gaps. Curve mid-air around walls to land.",
-      "desc": "A platform time trial with the knife out (fastest run speed). Some landings sit behind walls and can only be reached by curving mid-air. Hold the strafe key in the direction you turn your mouse and your velocity follows your view. Pressing A or D alone barely moves you, and you can't gain speed, so it works like Valorant's air control and not bunny-hopping.",
+      "desc": "A platform time trial with the knife out (fastest run speed). Some landings sit behind walls and can only be reached by curving mid-air. Hold the strafe key in the direction you turn your mouse and your velocity follows your view. Like Valorant, turning never costs speed and you can't gain any either: pressing A or D alone barely moves you, and bunny-hopping goes no further than running.",
       "tips": [
         "To curve right, hold D and sweep the mouse right smoothly. Don't hold W.",
         "Before a curve, run along the orange stripe (the inside line) and jump at the very edge.",
-        "Turning the mouse faster than your velocity can follow costs speed.",
+        "Turning fast doesn't cost speed, but your path can only bend so quickly, so start the turn as soon as you clear the wall.",
         "Falling sends you back to the last checkpoint with a +2s penalty."
       ]
     },
@@ -200,10 +200,10 @@
       "minScore": 6000,
       "maxScore": 600000,
       "short": "Crouch-jump onto ledges and land without making a sound.",
-      "desc": "Six ledges that a normal jump can't reach, all inside a sound zone. Hold Walk the whole way: a jump is only silent while Walk is held, and walking speed also keeps your landings quiet. Crouch-jump onto each ledge: crouching in the air pulls your legs up so your feet clear the edge, and because you land near the top of your jump the landing is silent too. Walk down the steps on the far side, since a small drop at walking speed is silent. Every footstep, jump or landing that would be heard costs +2s.",
+      "desc": "Six ledges that a normal jump can't reach, all inside a sound zone. Hold Walk (or Crouch) the whole way: a jump is only silent while Walk or Crouch is held, and walking speed also keeps your landings quiet. Crouch-jump onto each ledge: crouching in the air pulls your legs up so your feet clear the edge, and because you land near the top of your jump the landing is silent too. Walk down the steps on the far side, since a small drop at walking speed is silent. Every footstep, jump or landing that would be heard costs +2s.",
       "tips": [
-        "Keep Walk held when you press jump. Jumping without it is always heard, even when standing still.",
-        "Holding Walk silences the jump even straight out of a run, but you'd still be moving fast, and a fast landing is heard.",
+        "Keep Walk or Crouch held when you press jump. Jumping with neither is always heard, even when standing still.",
+        "Walk or Crouch silences the jump even straight out of a run, but you'd still be moving fast, and a fast landing is heard.",
         "Approach at walking speed. A landing while moving faster than a walk is loud even if the drop is tiny.",
         "Press crouch as you jump (or crouch first, then jump). Crouching late, after the top of your jump, may not clear the ledge.",
         "You can release crouch before you touch down and still land silently. What matters is how far you fall, not your stance.",

@@ -1,16 +1,21 @@
 import * as THREE from 'three';
 
 /**
- * Movement tuned to feel like Valorant (approximate, metres and seconds):
- * - run 5.4 m/s with a rifle (6.75 with knife), walk 56%, crouch 45%
- * - fast acceleration, short friction stop, and counter-strafing stops ~2.5x faster
- * - jump apex ~0.93 m, ~0.67 s air time
- * - Source-style air acceleration (strafe + mouse turn curves your jump) with a speed cap,
- *   so you can steer mid-air but never gain speed (no bunny hopping)
+ * Movement tuned to feel like Valorant (metres and seconds):
+ * - run 5.4 m/s with a rifle (6.75 with knife) [official wiki]; walk 56%, crouch 45% [estimates]
+ * - acceleration: ~0.26 s from standstill to run speed (Unreal default; estimate)
+ * - braking fitted to Riot's published stop timings: releasing the key reaches 25% speed in
+ *   ~110 ms and stops in ~160 ms; counter-strafing is only ~6 ms faster (~104 ms to 25%).
+ *   Unreal-style braking: dv/dt = -(brakeFriction·v + brakeDecel)
+ * - jump apex ~0.93 m, ~0.67 s air time [estimates]
+ * - air strafing: holding the strafe key toward your mouse turn bends your path to follow your
+ *   view (like CS), but turning never costs speed (unlike CS), and you can't gain speed: air
+ *   speed is capped at your take-off speed, so bunny hopping travels no further than running.
+ *   Pressing against your motion mid-air only bleeds speed slowly.
  * - crouch-jump: crouching in the air (or jumping while crouched) tucks your legs up, so your
  *   feet clear ledges a normal jump can't (~1.18 m instead of ~0.93 m)
  * - one "quiet speed" (just above walking speed): faster than it, footsteps start
- * - silent jump: the take-off is silent whenever Walk is held (at any speed); without Walk it's heard
+ * - silent jump: the take-off is silent whenever Walk or Crouch is held (at any speed); otherwise heard
  * - silent landing: landing makes noise if you hit the ground hard (fell more than ~0.3 m from
  *   the top of your arc) or faster than the quiet speed. A crouch-jump onto a ledge you only just
  *   clear, at walking speed, lands silently, even if you uncrouch before touching down.
@@ -19,8 +24,14 @@ export const MOVE = {
   tuckLift: 0.25,
   silentLandVy: 3.2,
   quietMult: 1.08, // × walk speed: above this, footsteps / jumps / landings are heard
-  accel: 45,
-  friction: 28,
+  // ~0.26 s from standstill to run speed: Unreal's default max acceleration (20.48 m/s²), which
+  // a community fit of Riot's stop timings also lands on. Riot hasn't published this (estimate).
+  accel: 20.8,
+  friction: 28, // sideways friction while changing direction on the ground
+  brakeFriction: 3.77, // 1/s  } fitted so 5.4 m/s → 25% in ~110 ms, full stop in ~160 ms
+  brakeDecel: 24.5, // m/s² }
+  counterExtra: 2.2, // m/s² extra while pressing the opposite key (~6 ms faster, per Riot)
+  airBrake: 3, // m/s² when pressing against your motion mid-air (estimate: slight, no air-stop)
   gravity: 16.5,
   jumpVel: 5.55,
   airAccel: 5,
@@ -36,6 +47,11 @@ export const MOVE = {
 };
 
 const EPS = 1e-4;
+
+/** Unreal-style braking for one tick: dv/dt = -(friction·v + decel + extra). Never below 0. */
+function brake(speed, dt, extra) {
+  return Math.max(0, speed - (MOVE.brakeFriction * speed + MOVE.brakeDecel + extra) * dt);
+}
 
 export class Player {
   constructor() {
@@ -102,9 +118,9 @@ export class Player {
     return vy > MOVE.silentLandVy || h > this.quietSpeed;
   }
 
-  /** Would this take-off be heard? Holding Walk silences it, whatever your speed. */
-  isLoudJump(walkHeld) {
-    return !walkHeld;
+  /** Would this take-off be heard? Holding Walk or Crouch silences it, whatever your speed. */
+  isLoudJump(walkHeld, crouched) {
+    return !walkHeld && !crouched;
   }
 
   /** Free space for a hull of height h with feet at y? */
@@ -217,7 +233,7 @@ export class Player {
         speed: this.takeoffSpeed,
         crouched: this.crouched,
         walk: !!inp.walk,
-        loud: this.isLoudJump(!!inp.walk),
+        loud: this.isLoudJump(!!inp.walk, this.crouched),
       });
       // jumping while already crouched counts as a crouch-jump too
       if (this.crouched) this.tuck(world);
@@ -228,36 +244,62 @@ export class Player {
         let along = vx * wx + vz * wz;
         let px = vx - along * wx;
         let pz = vz - along * wz;
+        // velocity that isn't in the new direction brakes on the same curve as a release
         const pl = Math.hypot(px, pz);
         if (pl > 0) {
-          const k = Math.max(0, pl - MOVE.friction * dt) / pl;
+          const k = brake(pl, dt, 0) / pl;
           px *= k;
           pz *= k;
         }
-        if (along < wishSpeed) {
-          const rate = along < 0 ? MOVE.accel + MOVE.friction : MOVE.accel;
-          along = Math.min(wishSpeed, along + rate * dt);
+        if (along < 0) {
+          // counter-strafe: brake (a hair harder than releasing) until you stop, then accelerate
+          const left = -along;
+          const slowed = brake(left, dt, MOVE.counterExtra);
+          along = slowed > 0 ? -slowed : Math.min(wishSpeed, MOVE.accel * dt * 0.5);
+        } else if (along < wishSpeed) {
+          along = Math.min(wishSpeed, along + MOVE.accel * dt);
         } else {
-          along = Math.max(wishSpeed, along - MOVE.friction * dt);
+          along = Math.max(wishSpeed, brake(along, dt, 0)); // e.g. switching from run to walk
         }
         vx = along * wx + px;
         vz = along * wz + pz;
       } else {
         const sp = Math.hypot(vx, vz);
         if (sp > 0) {
-          const k = Math.max(0, sp - MOVE.friction * dt) / sp;
+          const k = brake(sp, dt, 0) / sp;
           vx *= k;
           vz *= k;
         }
       }
     } else if (wishSpeed > 0) {
-      // Source-style air strafing: velocity follows the view when strafe + mouse turn are synced
-      const cur = vx * wx + vz * wz;
-      const add = Math.min(wishSpeed, MOVE.airCap) - cur;
-      if (add > 0) {
-        const acc = Math.min(MOVE.airAccel * wishSpeed * dt, add);
-        vx += acc * wx;
-        vz += acc * wz;
+      const sp0 = Math.hypot(vx, vz);
+      const ux = sp0 > 1e-3 ? vx / sp0 : 0;
+      const uz = sp0 > 1e-3 ? vz / sp0 : 0;
+      // "pressing against your motion" = input opposes velocity while you're still moving roughly
+      // the way you face (e.g. S while flying forward); over-turning the mouse is not braking
+      const facing = -Math.sin(yaw) * ux - Math.cos(yaw) * uz;
+      const opposing = ux * wx + uz * wz < -0.9 && Math.abs(facing) > 0.5;
+      if (sp0 > MOVE.airCap && opposing) {
+        // pressing against your motion mid-air slowly bleeds speed (no instant air-stop)
+        const ns = Math.max(0, sp0 - MOVE.airBrake * dt);
+        vx = ux * ns;
+        vz = uz * ns;
+      } else {
+        // strafe acceleration bends the path toward your view when strafe + mouse turn agree...
+        const cur = vx * wx + vz * wz;
+        const add = Math.min(wishSpeed, MOVE.airCap) - cur;
+        if (add > 0) {
+          const acc = Math.min(MOVE.airAccel * wishSpeed * dt, add);
+          vx += acc * wx;
+          vz += acc * wz;
+        }
+        // ...but, unlike CS, turning keeps your speed exactly (no loss when over-turning, no gain)
+        const sp1 = Math.hypot(vx, vz);
+        const target = Math.max(sp0, Math.min(sp1, MOVE.airCap));
+        if (sp1 > 1e-6) {
+          vx *= target / sp1;
+          vz *= target / sp1;
+        }
       }
       const cap = Math.max(this.takeoffSpeed, MOVE.airCap);
       const sp = Math.hypot(vx, vz);

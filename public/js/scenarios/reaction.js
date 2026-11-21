@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Scenario } from './base.js';
 import { Bot } from '../game/targets.js';
+import { BotGun, PLAYER_HP } from '../game/botfire.js';
 import { floor, backdrop } from './layouts.js';
 import { mean, median, pct, fmtMs } from '../util.js';
 
@@ -150,7 +151,11 @@ export class AngleHold extends Scenario {
   constructor(...a) {
     super(...a);
     this.feedback = 'movement';
-    this.reaction = this.d({ easy: 0.65, medium: 0.45, hard: 0.32 });
+    // shared bot model: reaction, then rifle taps against your 150 HP
+    this.gun = new BotGun(this.game, this.rng.fork(), this.diff);
+    this.reaction = this.gun.reaction;
+    this.hp = PLAYER_HP;
+    this.damageTaken = 0;
     this.sides = this.d({ easy: ['L'], medium: ['L', 'R'], hard: ['L', 'R'] });
     this.types = this.d({ easy: ['swing'], medium: ['swing', 'swing', 'wide'], hard: ['swing', 'swing', 'wide', 'jiggle'] });
     this.delay = this.d({ easy: [1.0, 2.4], medium: [0.8, 2.0], hard: [0.5, 1.6] });
@@ -211,6 +216,7 @@ export class AngleHold extends Scenario {
     this.bot = new Bot(this.game, o);
     this.bot.spawnedAt = this.elapsed;
     this.bot.shotAt = null;
+    this.hp = PLAYER_HP; // fresh duel each peek
     this.peeks += 1;
   }
 
@@ -222,19 +228,32 @@ export class AngleHold extends Scenario {
     }
     if (b.firstSeen == null && this.game.botVisible(b)) b.firstSeen = this.elapsed;
     if (b.behavior === 'peek' && b.state === 'hold' && b.firstSeen != null && b.shotAt == null) {
+      // once stopped and its reaction time is up, it fires taps for up to 1.2 s, then backs off
       b.shotAt = Math.max(b.firstSeen + this.reaction, this.elapsed + 0.05);
+      b.fireUntil = b.shotAt + 1.2;
     }
-    if (b.shotAt != null && this.elapsed >= b.shotAt && b.alive) {
-      if (this.game.playerVisibleFrom(b.headWorld())) {
-        this.deaths += 1;
-        this.points -= 50;
-        this.game.enemyTracer(b.headWorld());
-        this.hudApi.flash('death', 0.6);
-        this.hudApi.banner('YOU DIED: too slow', 'bad', 1);
-        this.game.audio.death();
+    if (b.shotAt != null && b.alive && this.elapsed >= b.shotAt) {
+      if (this.elapsed >= b.fireUntil) {
+        b.shotAt = Infinity;
+        b.retreat();
+      } else if (this.game.playerVisibleFrom(b.headWorld())) {
+        b.shotAt = this.elapsed + this.gun.interval;
+        const shot = this.gun.shoot(b.headWorld());
+        if (shot.hit) {
+          this.hp -= shot.damage;
+          this.damageTaken += shot.damage;
+          this.hudApi.flash('hit', 0.25);
+          if (this.hp <= 0) {
+            this.deaths += 1;
+            this.points -= 50;
+            this.hudApi.flash('death', 0.6);
+            this.hudApi.banner(`YOU DIED${shot.zone === 'head' ? ' (HEADSHOT)' : ''}: too slow`, 'bad', 1);
+            this.game.audio.death();
+            b.shotAt = Infinity;
+            b.retreat();
+          }
+        }
       }
-      b.shotAt = Infinity;
-      b.retreat();
     }
     if (b.escaped) {
       b.despawn();
@@ -267,6 +286,7 @@ export class AngleHold extends Scenario {
   hud() {
     return [
       ['Kills', `${this.kills}`],
+      ['HP', this.hp, this.hp < PLAYER_HP ? 'bad' : ''],
       ['Deaths', this.deaths, this.deaths ? 'bad' : ''],
       ['Avg TTK', this.ttks.length ? fmtMs(mean(this.ttks)) : '-'],
       ['Enemy reaction', fmtMs(this.reaction)],
@@ -277,6 +297,7 @@ export class AngleHold extends Scenario {
     return [
       ['Kills', this.kills],
       ['Deaths', this.deaths],
+      ['Damage taken', this.damageTaken],
       ['Peeks faced', this.peeks],
       ['Avg time to kill', this.ttks.length ? fmtMs(mean(this.ttks)) : '-'],
       ['Fastest kill', this.ttks.length ? fmtMs(Math.min(...this.ttks)) : '-'],

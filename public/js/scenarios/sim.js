@@ -1,46 +1,52 @@
 import * as THREE from 'three';
 import { Scenario } from './base.js';
 import { Bot } from '../game/targets.js';
+import { BotGun, PLAYER_HP } from '../game/botfire.js';
 import { floor, backdrop } from './layouts.js';
 import { mean, pct, fmtMs } from '../util.js';
 
+const PILLAR_HALF = 1.7; // cover is 3.4 m wide
+
 /**
- * Peek Duels: enemies hold angles hidden behind your cover pillar. Swing out, find them,
- * counter-strafe and kill before their reaction timer runs out. 10 rounds.
+ * Peek Duels: enemies hold angles hidden behind your cover. Swing out, find them, stop and kill
+ * them before they react and out-trade you. 10 rounds. Enemy fire uses the shared bot model:
+ * a reaction time, then rifle taps whose hit chance drops while you're moving or airborne,
+ * dealing real damage to your 150 HP.
  */
 export class PeekDuel extends Scenario {
   constructor(...a) {
     super(...a);
     this.feedback = 'movement';
     this.rounds = 10;
-    this.reaction = this.d({ easy: 0.42, medium: 0.3, hard: 0.22 });
+    this.gun = new BotGun(this.game, this.rng.fork(), this.diff);
+    this.reaction = this.gun.reaction;
     this.perRound = this.d({ easy: 1, medium: 1, hard: 2 });
-    this.hitMoving = this.d({ easy: 0.45, medium: 0.55, hard: 0.65 });
     this.round = 0;
     this.won = 0;
     this.lost = 0;
     this.bots = [];
     this.phase = 'pre';
     this.nextAt = 0;
+    this.hp = PLAYER_HP;
+    this.damageTaken = 0;
     this.exposures = [];
     this.peekTimes = [];
     this.accurateShots = 0;
     this.headKills = 0;
     this.kills = 0;
-    this.hitRng = this.rng.fork();
   }
 
   build(w) {
     floor(w, -40, 40, -60, 10);
     // player booth
-    w.box([-5.4, 0, 2.8], [5.4, 3, 3.2], { mat: 'wall' });
-    w.box([-5.4, 0, -2.4], [-5, 3, 3.2], { mat: 'wall' });
-    w.box([5, 0, -2.4], [5.4, 3, 3.2], { mat: 'wall' });
-    // cover pillar you peek from
-    this.pillar = w.box([-1, 0, -2.4], [1, 3.4, -1.4], { mat: 'cover' });
+    w.box([-6.4, 0, 2.8], [6.4, 3, 3.2], { mat: 'wall' });
+    w.box([-6.4, 0, -2.6], [-6, 3, 3.2], { mat: 'wall' });
+    w.box([6, 0, -2.6], [6.4, 3, 3.2], { mat: 'wall' });
+    // cover you peek from
+    this.pillar = w.box([-PILLAR_HALF, 0, -2.6], [PILLAR_HALF, 3.4, -1.4], { mat: 'cover' });
     backdrop(w, -34, -40, 40, 8);
     // side props outside the duel zone
-    for (const [x, z] of [[-18, -14], [18, -16], [-24, -26], [24, -28]]) w.box([x - 1.2, 0, z - 1.2], [x + 1.2, 2.2, z + 1.2], { mat: 'cover' });
+    for (const [x, z] of [[-20, -14], [20, -16], [-26, -26], [26, -28]]) w.box([x - 1.2, 0, z - 1.2], [x + 1.2, 2.2, z + 1.2], { mat: 'cover' });
   }
 
   spawn() {
@@ -55,6 +61,7 @@ export class PeekDuel extends Scenario {
     this.round += 1;
     for (const b of this.bots) if (b.alive) b.despawn();
     this.bots = [];
+    this.hp = PLAYER_HP;
     const sp = this.spawn();
     this.game.respawn(sp.pos, 0, 0);
     this.game.freeze(0.6);
@@ -63,7 +70,7 @@ export class PeekDuel extends Scenario {
       let placed = null;
       for (let tries = 0; tries < 60 && !placed; tries++) {
         const d = this.rng.float(9, 24);
-        const x = this.rng.float(-0.42, 0.42) * (d + 0.8);
+        const x = this.rng.float(-0.62, 0.62) * (d + 0.8);
         if (this.bots.some((b) => b.origin.distanceTo(new THREE.Vector3(x, 0, -d)) < 3)) continue;
         const bot = new Bot(this.game, {
           origin: new THREE.Vector3(x, 0, -d),
@@ -84,7 +91,6 @@ export class PeekDuel extends Scenario {
         this.bots.push(placed);
       }
     }
-    this.roundStart = this.elapsed + 0.6;
     this.firstExposed = null;
     this.phase = 'live';
     this.hudApi.banner(`ROUND ${this.round} / ${this.rounds}`, 'info', 0.8);
@@ -100,7 +106,6 @@ export class PeekDuel extends Scenario {
       return;
     }
     if (this.phase !== 'live') return;
-    const p = this.player;
     let maxExp = 0;
     for (const b of this.bots) {
       if (!b.alive) continue;
@@ -115,24 +120,28 @@ export class PeekDuel extends Scenario {
       }
       maxExp = Math.max(maxExp, b.exposure);
       if (sees && b.exposure >= this.reaction && this.elapsed >= b.nextShot) {
-        this.game.enemyTracer(b.headWorld());
-        const moving = p.hspeed() > 0.55 * p.runSpeed || !p.onGround;
-        if (this.hitRng.chance(moving ? this.hitMoving : 0.95)) {
-          this.loseRound(b.exposure);
-          return;
+        b.nextShot = this.elapsed + this.gun.interval;
+        const shot = this.gun.shoot(b.headWorld());
+        if (shot.hit) {
+          this.hp -= shot.damage;
+          this.damageTaken += shot.damage;
+          this.hudApi.flash('hit', 0.25);
+          if (this.hp <= 0) {
+            this.loseRound(b.exposure, shot.zone);
+            return;
+          }
         }
-        b.nextShot = this.elapsed + 0.11;
       }
     }
     this.hudApi.exposed(maxExp > 0, maxExp);
   }
 
-  loseRound(exp) {
+  loseRound(exp, zone) {
     this.lost += 1;
     this.phase = 'post';
     this.nextAt = this.elapsed + 1.4;
     this.hudApi.flash('death', 0.8);
-    this.hudApi.banner(`KILLED · exposed ${fmtMs(exp)}`, 'bad', 1.3);
+    this.hudApi.banner(`KILLED${zone === 'head' ? ' (HEADSHOT)' : ''} · exposed ${fmtMs(exp)}`, 'bad', 1.3);
     this.game.audio.death();
     this.game.freeze(1.4);
   }
@@ -149,10 +158,10 @@ export class PeekDuel extends Scenario {
     if (this.bots.every((x) => !x.alive)) {
       const worst = Math.max(...this.bots.map((x) => x.exposure));
       this.won += 1;
-      this.points += 100 + Math.max(0, 1 - worst / this.reaction) * 100;
+      this.points += 100 + Math.max(0, 1 - worst / this.reaction) * 100 + (this.hp === PLAYER_HP ? 25 : 0);
       this.phase = 'post';
       this.nextAt = this.elapsed + 1.0;
-      this.hudApi.banner('ROUND WON', 'good', 0.9);
+      this.hudApi.banner(this.hp === PLAYER_HP ? 'ROUND WON · UNTOUCHED' : `ROUND WON · ${this.hp} HP left`, 'good', 0.9);
       this.game.audio.good();
     }
   }
@@ -160,8 +169,8 @@ export class PeekDuel extends Scenario {
   hud() {
     return [
       ['Round', `${Math.min(this.round, this.rounds)} / ${this.rounds}`],
-      ['Won', this.won, 'good'],
-      ['Lost', this.lost, this.lost ? 'bad' : ''],
+      ['HP', this.hp, this.hp < PLAYER_HP ? 'bad' : ''],
+      ['Won / lost', `${this.won} / ${this.lost}`],
       ['Enemy reaction', fmtMs(this.reaction)],
     ];
   }
@@ -171,6 +180,7 @@ export class PeekDuel extends Scenario {
       ['Rounds won', `${this.won} / ${this.won + this.lost}`],
       ['Avg exposure per kill', this.exposures.length ? fmtMs(mean(this.exposures)) : '-'],
       ['Avg peek-to-kill', this.peekTimes.length ? fmtMs(mean(this.peekTimes)) : '-'],
+      ['Damage taken', this.damageTaken],
       ['Accurate (stopped) shots', `${pct(this.accurateShots, this.shots)}%`],
       ['Headshot kills', `${pct(this.headKills, this.kills)}%`],
       ['Accuracy', `${pct(this.hits, this.shots)}%`],

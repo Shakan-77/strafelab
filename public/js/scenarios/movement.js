@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Scenario } from './base.js';
 import { Bot, Orb } from '../game/targets.js';
 import { MOVE } from '../game/player.js';
+import { BotGun, PLAYER_HP } from '../game/botfire.js';
 import { floor, backdrop, strafeLane, props } from './layouts.js';
 import { mean, pct, fmtMs } from '../util.js';
 
@@ -498,7 +499,9 @@ export class MoveCourse extends TimeTrial {
     this.galleryOn = false;
     this.botExposure = 0;
     this.botHidden = 0;
-    this.reaction = this.d({ easy: 0.6, medium: 0.45, hard: 0.32 });
+    this.gun = new BotGun(this.game, this.rng.fork(), this.diff);
+    this.reaction = this.gun.reaction;
+    this.hp = PLAYER_HP;
   }
 
   build(w) {
@@ -583,12 +586,20 @@ export class MoveCourse extends TimeTrial {
         if (this.botHidden > 0.3) this.botExposure = 0;
         this.hudApi.exposed(false);
       }
-      if (this.botExposure >= this.reaction) {
-        this.botExposure = 0;
-        this.traded += 1;
-        this.game.enemyTracer(bot.headWorld());
-        this.hudApi.flash('hit', 0.3);
-        this.addPenalty(2, 'TRADED');
+      // shared bot model: after its reaction time it fires taps; if they'd have killed you, +2s
+      if (sees && this.botExposure >= this.reaction && this.elapsed >= (this.botNextShot || 0)) {
+        this.botNextShot = this.elapsed + this.gun.interval;
+        const shot = this.gun.shoot(bot.headWorld());
+        if (shot.hit) {
+          this.hp -= shot.damage;
+          this.hudApi.flash('hit', 0.25);
+          if (this.hp <= 0) {
+            this.hp = PLAYER_HP;
+            this.botExposure = 0;
+            this.traded += 1;
+            this.addPenalty(2, 'TRADED');
+          }
+        }
       }
     } else {
       this.hudApi.exposed(false);
@@ -754,7 +765,7 @@ export class SilentJumps extends TimeTrial {
       ['Time', this.finishTime != null ? `${this.finishTime.toFixed(2)}s` : 'DNF'],
       ['Penalties', `+${this.penalty.toFixed(0)}s`],
       ['Silent jumps', `${this.silentJumps} / ${this.jumps} (${pct(this.silentJumps, this.jumps)}%)`],
-      ['Loud jumps (Walk not held)', this.loudJumpNoWalk],
+      ['Loud jumps (no Walk or Crouch)', this.loudJumpNoWalk],
       ['Silent landings', `${this.silent} / ${this.landings} (${pct(this.silent, this.landings)}%)`],
       ['Loud landing: fell too far', this.loudHard],
       ['Loud landing: too fast', this.loudFast],

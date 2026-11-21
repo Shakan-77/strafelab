@@ -229,6 +229,7 @@ input[type=range] { accent-color: var(--accent); }
 .numbers td.src { padding-left: 12px; white-space: nowrap; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; text-align: right; }
 .numbers td.src.wiki { color: var(--good); }
 .numbers td.src.est { color: var(--warn); }
+.numbers td.src.riot { color: var(--accent); }
 
 /* ================================================================ game */
 #game-root { position: fixed; inset: 0; background: #000; z-index: 20; cursor: crosshair; }
@@ -284,7 +285,19 @@ input[type=range] { accent-color: var(--accent); }
 #hud-speed-mark { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #fff; }
 #hud-speed-label { text-align: center; font-size: 12px; margin-top: 3px; color: #cfd8e8; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
 #hud-speed[data-state="ok"] #hud-speed-label { color: var(--good); }
-#hud-weapon { font-size: 14px; font-weight: 600; letter-spacing: 0.1em; color: #cfd8e8; }
+#hud-ammo { position: absolute; right: 28px; bottom: 26px; text-align: right; min-width: 150px; }
+#hud-ammo .ammo-count { display: flex; align-items: baseline; justify-content: flex-end; gap: 6px; font-variant-numeric: tabular-nums; }
+#hud-ammo-cur { font-size: 46px; font-weight: 700; line-height: 1; color: #f2f5fa; }
+#hud-ammo-max { font-size: 20px; font-weight: 600; color: #9aa6ba; }
+#hud-ammo-name { font-size: 13px; font-weight: 600; letter-spacing: 0.14em; color: #aab5c8; margin-top: 2px; }
+#hud-reload-hint { font-size: 14px; font-weight: 700; letter-spacing: 0.12em; margin-top: 4px; min-height: 18px; color: var(--warn); }
+#hud-reload-bar { height: 4px; background: #ffffff22; border-radius: 2px; overflow: hidden; margin-top: 4px; }
+#hud-reload-fill { height: 100%; background: var(--accent); transform-origin: right; }
+#hud-ammo[data-state="low"] #hud-ammo-cur { color: var(--warn); }
+#hud-ammo[data-state="empty"] #hud-ammo-cur { color: var(--bad); }
+#hud-ammo[data-state="empty"] #hud-reload-hint { color: var(--bad); animation: blink 0.8s steps(2) infinite; }
+#hud-ammo[data-state="reloading"] #hud-reload-hint { color: var(--accent); }
+@keyframes blink { 50% { opacity: 0.35; } }
 #hud-bolt { width: 140px; height: 4px; background: #ffffff22; border-radius: 2px; overflow: hidden; }
 #hud-bolt-fill { height: 100%; background: var(--warm); transform-origin: left; }
 #hud-fps { position: absolute; bottom: 10px; right: 14px; font-size: 12px; color: #8592aa; }

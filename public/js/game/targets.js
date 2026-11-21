@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { clamp, lerp } from '../util.js';
+import { MOVE } from './player.js';
 
 export const ENEMY_COLORS = { red: '#ff4d5e', yellow: '#f2e33b', purple: '#c65bff' };
 
@@ -8,9 +9,15 @@ const GEO = {
   box: new THREE.BoxGeometry(1, 1, 1),
 };
 
-// Same acceleration model as the player, so bots stop and reverse like real people.
-const ACC = 45;
-const FRIC = 28;
+// Same acceleration and braking as the player, so bots start, stop and reverse like real people.
+const ACC = MOVE.accel;
+const brakeStep = (speed, dt, extra = 0) => Math.max(0, speed - (MOVE.brakeFriction * speed + MOVE.brakeDecel + extra) * dt);
+/** Distance to stop from speed v under dv/dt = -(F·v + B). */
+const stopDistance = (v) => {
+  const F = MOVE.brakeFriction;
+  const B = MOVE.brakeDecel + MOVE.counterExtra;
+  return v / F - (B / (F * F)) * Math.log(1 + (F * v) / B);
+};
 
 // Tagging: VALORANT slows anyone hit by a bullet by 72.5% (patch 3.0). Riot hasn't published
 // the duration; 0.5 s easing back to full speed is an estimate (it matches the published
@@ -127,15 +134,16 @@ export class Bot {
     const w = this.wish;
     if (w !== 0) {
       const along = this.v * w;
-      if (along < max) {
-        const rate = along < 0 ? ACC + FRIC : ACC;
-        this.v += w * Math.min(rate * dt, max - along);
+      if (along < 0) {
+        const slowed = brakeStep(-along, dt, MOVE.counterExtra);
+        this.v = w * (slowed > 0 ? -slowed : Math.min(max, ACC * dt * 0.5));
+      } else if (along < max) {
+        this.v = w * Math.min(max, along + ACC * dt);
       } else {
-        this.v = w * Math.max(max, along - FRIC * dt);
+        this.v = w * Math.max(max, brakeStep(along, dt));
       }
     } else {
-      const sp = Math.abs(this.v);
-      this.v = Math.sign(this.v) * Math.max(0, sp - FRIC * dt);
+      this.v = Math.sign(this.v) * brakeStep(Math.abs(this.v), dt);
     }
     this.s += this.v * dt;
     if (this.s < this.min) {
@@ -252,7 +260,7 @@ export class Bot {
   }
 
   brakeDist() {
-    return (this.v * this.v) / (2 * (ACC + FRIC));
+    return stopDistance(Math.abs(this.v));
   }
 
   retreat() {

@@ -131,6 +131,12 @@ class FlickBase extends Scenario {
     const pos = eye.add(dirFromAngles(this.tYaw, this.tPitch).multiplyScalar(this.D));
     this.orb = new Orb(this.game, pos, r);
     this.orb.spawnedAt = this.elapsed;
+    if (this.spawnCue) {
+      // positional ping from the target so you can hear which way (and if it's behind you)
+      const behind = Math.abs(angleDiff(this.tYaw, this.game.yaw)) > Math.PI / 2;
+      this.game.audio.spawnCue(pos, behind);
+      this.lastCue = { pos: pos.clone(), behind };
+    }
   }
 
   onShot(s) {
@@ -217,6 +223,7 @@ export class Macro extends FlickBase {
     this.cleans = 0;
     this.flick = null;
     this.lastYaw = 0;
+    this.spawnCue = true; // 360° drill: every spawn pings from the target's direction
   }
 
   build(w) {

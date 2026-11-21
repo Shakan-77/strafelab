@@ -3,17 +3,17 @@ export const GUIDE = [
   {
     title: 'Counter-strafing',
     drill: 'counter-strafe',
-    body: 'Valorant punishes shooting while moving with large spread. To shoot accurately you have to drop below roughly a quarter of your run speed. Releasing the key lets friction stop you in about 0.19s. Tapping the opposite key adds acceleration on top of friction and stops you in about 0.07s.',
+    body: 'Valorant punishes shooting while moving with large spread. To shoot accurately you have to drop below 27.5% of your run speed. Riot\'s own measurements show releasing the key gets you there in about 0.11 s (full stop about 0.16 s), and counter-strafing is only a few milliseconds faster. Unlike CS, the skill isn\'t how hard you brake. It\'s firing the instant you\'re accurate.',
     points: [
-      'Tap the opposite key, don\'t hold it. Holding it just moves you the other way.',
-      'Fire the moment the speed meter turns green. Firing later wastes the peek.',
+      'Releasing and counter-strafing are almost equally fast in Valorant. Pick one and time it consistently.',
+      'Fire the moment the speed meter turns green. Firing earlier misses, firing later wastes the peek.',
       'The drill tracks every stop: how long it took, and whether you counter-strafed or just released.',
     ],
   },
   {
     title: 'Shooting while strafing (ADAD)',
     drill: 'strafe-shoot',
-    body: 'In Valorant, "shooting while strafing" means firing at the dead point between A and D, where your velocity crosses zero. You stay hard to hit and still land accurate first bullets. The accurate window lasts only a few tens of milliseconds, so it\'s a timing skill.',
+    body: 'In Valorant, "shooting while strafing" means firing at the dead point between A and D, where your velocity crosses zero. You stay hard to hit and still land accurate first bullets. With Valorant\'s braking and acceleration you\'re under the accuracy threshold for only about 0.12 s per reversal with pure ADAD (a little longer if you release for a beat), so it\'s a timing skill.',
     points: [
       'Pick a rhythm first, then add the shot at the reversal.',
       'A, release, click, D is easier than pure ADAD and almost as hard to hit.',
@@ -23,11 +23,11 @@ export const GUIDE = [
   {
     title: 'Air strafing',
     drill: 'air-course',
-    body: 'In the air, pressing A or D on its own barely changes your path. Holding the strafe key in the same direction you sweep your mouse makes your velocity follow your view, so you can curve around corners and onto ledges. Like Valorant, you can\'t gain speed this way.',
+    body: 'In the air, pressing A or D on its own barely changes your path. Holding the strafe key in the same direction you sweep your mouse makes your velocity follow your view, so you can curve around corners and onto ledges. Unlike CS, turning never costs speed, and like Valorant you can\'t gain any: air speed is capped at your take-off speed, so bunny-hopping travels exactly as far as running. Pressing against your motion mid-air only slows you a little.',
     points: [
       'Curve right: release W, hold D, sweep the mouse right smoothly.',
-      'Turning faster than your velocity can follow bleeds speed.',
-      'You are always inaccurate in the air (9°+ spread), so land and stop before you shoot.',
+      'Your path can only bend so fast (about 280°/s), so start turning early rather than flicking.',
+      'You are always inaccurate in the air (+10° rifle spread) and for 0.225 s after landing (+7°).',
     ],
   },
   {
@@ -73,9 +73,9 @@ export const GUIDE = [
   {
     title: 'Silent jumps',
     drill: 'silent-jump',
-    body: 'A jump can be heard twice: at take-off and on landing. The take-off is silent whenever you hold Walk as you press jump, even straight out of a run. Without Walk it\'s heard, even from a standstill. A landing is silent when you barely fall at the end of your jump and you\'re still at walking speed. Crouching while you jump pulls your legs up, so you clear a ledge that a normal jump can\'t reach and land close to the top of your jump, a short and silent fall. You can stand back up before touching down and the landing stays silent, because the sound depends on how hard you hit the ground, not on your stance.',
+    body: 'A jump can be heard twice: at take-off and on landing. The take-off is silent whenever you hold Walk or Crouch as you press jump, even straight out of a run. With neither, it\'s heard, even from a standstill. A landing is silent when you barely fall at the end of your jump and you\'re still at walking speed. Crouching while you jump pulls your legs up, so you clear a ledge that a normal jump can\'t reach and land close to the top of your jump, a short and silent fall. You can stand back up before touching down and the landing stays silent, because the sound depends on how hard you hit the ground, not on your stance.',
     points: [
-      'Hold Walk, then jump and crouch together, and you get onto the ledge without a sound.',
+      'Hold Walk, then jump and crouch together, and you get onto the ledge without a sound. A crouch-jump is silent at take-off even without Walk.',
       'Bind Walk and Jump to the same key if pressing both together is awkward.',
       'A silent take-off doesn\'t save a loud landing: running speed or a long drop makes any landing loud. Take small steps down, never the full drop.',
     ],
@@ -92,7 +92,10 @@ export const GUIDE = [
   },
 ];
 
-/** [label, value, source]: 'wiki' = official VALORANT wiki / patch notes, 'est' = estimate. */
+/**
+ * [label, value, source]: 'wiki' = official VALORANT wiki / patch notes,
+ * 'riot' = Riot dev measurements as reported second-hand, 'est' = estimate.
+ */
 export const NUMBERS = [
   ['Sensitivity', '0.07° per mouse count × in-game sens', 'wiki'],
   ['Field of view', '103° horizontal at 16:9 (vertical FOV fixed on other aspect ratios)', 'wiki'],
@@ -108,11 +111,14 @@ export const NUMBERS = [
   ['Rifle damage', 'Head 160 · Body 40 · Legs 34 (150 HP target)', 'wiki'],
   ['Sniper damage', 'Head 255 · Body 150 · Legs 120 · 0.6 shots/s', 'wiki'],
   ['Walk / crouch', '56% / 45% of run speed. Both are silent.', 'est'],
-  ['Stop time', '~0.19 s releasing the key · ~0.07 s counter-strafing', 'est'],
+  ['Stop time', 'Release: 25% speed in ~110 ms, full stop ~160 ms · counter-strafe ~104 ms to 25%', 'riot'],
+  ['Acceleration', '~0.26 s from standstill to run speed (Unreal default); too fast to shoot after ~80 ms', 'est'],
+  ['Enemy bots', 'React in 0.50 / 0.38 / 0.28 s (easy/medium/hard), then rifle taps vs your 150 HP; they hit you less while you move or jump', 'est'],
+  ['Air strafing', 'Velocity follows your view when strafe + mouse agree, no speed lost when turning, capped at take-off speed (bhop = run distance)', 'est'],
   ['Jump', '~0.93 m apex, ~0.67 s in the air', 'est'],
   ['Crouch-jump', 'Crouching in the air lifts your feet 0.25 m (reach ~1.16 m)', 'est'],
   ['Quiet speed', 'Up to 108% of walking speed (3.27 m/s with a rifle). Faster than this, footsteps start.', 'est'],
-  ['Silent jump', 'Walk held at take-off, at any speed. Otherwise the jump is heard.', 'est'],
+  ['Silent jump', 'Walk or Crouch held at take-off, at any speed. Otherwise the jump is heard.', 'est'],
   ['Silent landing', 'Fall of ~0.3 m or less (impact under 3.2 m/s) at quiet speed or slower', 'est'],
   ['Tick rate', 'Physics simulated at 128 Hz', 'wiki'],
 ];

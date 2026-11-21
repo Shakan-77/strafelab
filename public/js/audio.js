@@ -95,6 +95,76 @@ export class AudioFX {
     this.noise(0.08, { vol: 0.22, freq: 380, q: 1.2 });
   }
 
+  /** Keep the WebAudio listener on the camera so positional sounds come from the right place. */
+  setListener(pos, fwd, up) {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const L = ctx.listener;
+    if (L.positionX) {
+      const t = ctx.currentTime;
+      L.positionX.setValueAtTime(pos.x, t);
+      L.positionY.setValueAtTime(pos.y, t);
+      L.positionZ.setValueAtTime(pos.z, t);
+      L.forwardX.setValueAtTime(fwd.x, t);
+      L.forwardY.setValueAtTime(fwd.y, t);
+      L.forwardZ.setValueAtTime(fwd.z, t);
+      L.upX.setValueAtTime(up.x, t);
+      L.upY.setValueAtTime(up.y, t);
+      L.upZ.setValueAtTime(up.z, t);
+    } else {
+      L.setPosition(pos.x, pos.y, pos.z);
+      L.setOrientation(fwd.x, fwd.y, fwd.z, up.x, up.y, up.z);
+    }
+  }
+
+  /**
+   * Target-spawn cue played from the target's position (HRTF), so you can hear which way to
+   * flick, even behind you. Sounds from behind are slightly muffled to help front/back.
+   */
+  spawnCue(pos, behind = false) {
+    const ctx = this.ensure();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const panner = ctx.createPanner();
+    panner.panningModel = 'HRTF';
+    panner.distanceModel = 'inverse';
+    panner.refDistance = 8;
+    panner.rolloffFactor = 0.5;
+    if (panner.positionX) {
+      panner.positionX.setValueAtTime(pos.x, t);
+      panner.positionY.setValueAtTime(pos.y, t);
+      panner.positionZ.setValueAtTime(pos.z, t);
+    } else {
+      panner.setPosition(pos.x, pos.y, pos.z);
+    }
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = behind ? 2200 : 12000;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+    g.connect(filter).connect(panner).connect(this.master);
+    for (const [type, f0, f1] of [['triangle', 1500, 1100], ['sine', 750, 560]]) {
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(f1, t + 0.22);
+      o.connect(g);
+      o.start(t);
+      o.stop(t + 0.28);
+    }
+    // short noise transient gives the ear a sharp onset to localise
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuf;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.25, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+    src.connect(ng).connect(filter);
+    src.start(t, Math.random() * 0.5);
+    src.stop(t + 0.05);
+  }
+
   /** Jump take-off: a short shoe scuff, lighter than a landing. */
   jump() {
     if (!this.footsteps) return;

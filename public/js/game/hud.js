@@ -18,7 +18,13 @@ export class Hud {
     this.speedFill = $('hud-speed-fill');
     this.speedMark = $('hud-speed-mark');
     this.speedLabel = $('hud-speed-label');
-    this.weaponEl = $('hud-weapon');
+    this.ammoEl = $('hud-ammo');
+    this.ammoCur = $('hud-ammo-cur');
+    this.ammoMax = $('hud-ammo-max');
+    this.ammoName = $('hud-ammo-name');
+    this.reloadHint = $('hud-reload-hint');
+    this.reloadBar = $('hud-reload-bar');
+    this.reloadFill = $('hud-reload-fill');
     this.boltEl = $('hud-bolt');
     this.boltFill = $('hud-bolt-fill');
     this.fpsEl = $('hud-fps');
@@ -51,7 +57,8 @@ export class Hud {
     this.vignette.className = '';
     this.scope(false);
     this.speedEl.hidden = !opts.showSpeed;
-    this.weaponEl.hidden = weapon.noFire;
+    this.ammoEl.hidden = !!weapon.noFire;
+    this.reloadBar.hidden = true;
     this.boltEl.hidden = true;
     this.fpsEl.hidden = !opts.showFps;
     this.boardEl.hidden = true;
@@ -81,8 +88,28 @@ export class Hud {
     this.set(this.speedLabel, `${sp.toFixed(2)} m/s${!onGround ? ' · AIR' : sp <= acc ? ' · ACCURATE' : ''}`, 'speedLabel');
   }
 
-  weapon(text) {
-    this.set(this.weaponEl, text, 'weapon');
+  /**
+   * Bottom-right ammo panel: rounds left / magazine, weapon + zoom, reload prompt and progress.
+   * a = { cur, max, name, reloadFrac (0..1 while reloading, else -1), key }
+   */
+  ammo(a) {
+    const infinite = !Number.isFinite(a.max);
+    this.set(this.ammoCur, infinite ? '∞' : String(a.cur), 'ammoCur');
+    this.set(this.ammoMax, infinite ? '' : `/ ${a.max}`, 'ammoMax');
+    this.set(this.ammoName, a.name, 'ammoName');
+    const reloading = a.reloadFrac >= 0;
+    const low = !infinite && !reloading && a.cur <= Math.ceil(a.max * 0.3);
+    const state = reloading ? 'reloading' : a.cur === 0 && !infinite ? 'empty' : low ? 'low' : 'ok';
+    if (this.cache.get('ammoState') !== state) {
+      this.cache.set('ammoState', state);
+      this.ammoEl.dataset.state = state;
+    }
+    let hint = '';
+    if (reloading) hint = 'RELOADING';
+    else if (!infinite && a.cur < a.max && (low || a.cur === 0)) hint = `[${a.key}] RELOAD`;
+    this.set(this.reloadHint, hint, 'reloadHint');
+    if (this.reloadBar.hidden === reloading) this.reloadBar.hidden = !reloading;
+    if (reloading) this.reloadFill.style.transform = `scaleX(${a.reloadFrac.toFixed(3)})`;
   }
 
   bolt(frac) {

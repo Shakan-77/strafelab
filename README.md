@@ -20,7 +20,7 @@ Options: `--port 9000`, `--host 127.0.0.1` (local only). By default the server l
 |---|---|---|
 | Movement | Counter-Strafe Drill | Stopping with the opposite key and tapping the head while the window is open. Every stop is timed. |
 | Movement | ADAD Strafe Shooting | Firing at the dead point of each strafe. Lucky moving hits score almost nothing. |
-| Movement | Silent Jumps | Hold Walk and crouch-jump onto ledges a normal jump can't reach. Jumps without Walk are heard, and so are hard or fast landings. |
+| Movement | Silent Jumps | Hold Walk (or Crouch) and crouch-jump onto ledges a normal jump can't reach. Jumps with neither held are heard, and so are hard or fast landings. |
 | Movement | Air Strafe Course | Time trial where some landings are only reachable by curving mid-air (strafe and mouse in sync). |
 | Precision | Strafing Bots: Rifle Taps | Humanoid head/body/leg hitboxes that ADAD, stop and crouch with player-like acceleration. |
 | Precision | Micro Adjust | 1–6° corrections onto head-sized targets. |

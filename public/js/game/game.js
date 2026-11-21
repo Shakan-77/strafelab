@@ -837,7 +837,7 @@ export class Game {
       if (data.loud) this.audio.jump();
       if (explain) {
         if (!data.loud) this.hud.feedback('SILENT JUMP', 'good', 0.6);
-        else this.hud.feedback(`LOUD JUMP · hold ${this.keyName('walk')}`, 'bad', 0.8);
+        else this.hud.feedback(`LOUD JUMP · hold ${this.keyName('walk')} or ${this.keyName('crouch')}`, 'bad', 0.8);
       }
     }
     if (type === 'land') {
@@ -891,6 +891,11 @@ export class Game {
     this.syncCamera(alpha);
     for (const e of this.entities) e.frame?.(alpha);
     this.renderer.render(this.scene, this.camera);
+    if (this.audio.ctx) {
+      this.camera.getWorldDirection(_v1);
+      _v2.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
+      this.audio.setListener(this.camera.position, _v1, _v2);
+    }
     this.scenario?.postRender?.(performance.now());
   }
 
@@ -986,9 +991,14 @@ export class Game {
     if (this.settings.showSpeed && s.allowMove !== false) h.speed(p.hspeed(), p.runSpeed, p.accurateSpeed, p.onGround);
     const w = this.weapon;
     if (!w.noFire) {
-      const ammo = Number.isFinite(w.mag) ? `${this.ammo} / ${w.mag}` : '∞';
-      h.weapon(`${w.name.toUpperCase()}  ${this.reloadT > 0 ? 'RELOADING' : ammo}${this.zoom > 1 ? `  ${this.zoom}x` : ''}`);
-      if (w.scope) h.bolt(this.fireCooldown > 0 ? 1 - this.fireCooldown / w.interval : 1);
+      h.ammo({
+        cur: this.ammo,
+        max: w.mag,
+        name: `${w.name.toUpperCase()}${this.zoom > 1 ? ` · ${this.zoom}x` : ''}`,
+        reloadFrac: this.reloadT > 0 ? 1 - this.reloadT / w.reload : -1,
+        key: this.keyName('reload'),
+      });
+      if (w.scope?.unscopeOnFire) h.bolt(this.fireCooldown > 0 ? 1 - this.fireCooldown / w.interval : 1);
     }
   }
 
