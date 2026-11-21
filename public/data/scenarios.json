@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "difficulties": ["easy", "medium", "hard"],
+  "categories": ["Movement", "Precision", "Sniper", "Reaction", "Simulation"],
+  "scenarios": [
+    {
+      "id": "counter-strafe",
+      "name": "Counter-Strafe Drill",
+      "category": "Movement",
+      "weapon": "rifle",
+      "duration": 60,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 60000,
+      "short": "Strafe, stop with the opposite key, one-tap the head.",
+      "desc": "An enemy only appears while you are strafing at full speed. Stop with a counter-strafe (tap the opposite key) and tap the head before the window closes. Shots fired above the accuracy threshold are inaccurate and cost points, the same way running error ruins first shots in Valorant.",
+      "tips": [
+        "Tap the opposite key to stop. Holding it too long accelerates you the other way.",
+        "Watch the speed meter. Shots only count as accurate once the bar turns green.",
+        "Counter-strafing stops you about 2.5x faster than just releasing the key."
+      ]
+    },
+    {
+      "id": "strafe-shoot",
+      "name": "ADAD Strafe Shooting",
+      "category": "Movement",
+      "weapon": "rifle",
+      "duration": 60,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 60000,
+      "short": "Keep strafing and land shots at the dead point of each strafe.",
+      "desc": "Shooting while strafing in Valorant means firing at the instant your velocity crosses zero between A and D. Keep moving: if you stand still the drill warns you and your hits score less. Hits at the peak of a strafe score full points, and lucky hits while moving score almost nothing.",
+      "tips": [
+        "The window is tiny. Shoot as your strafe reverses, not mid-strafe.",
+        "A short release before reversing (A, release, shoot, D) is easier than pure ADAD.",
+        "Keep the crosshair at head height the whole time so you only have to time the shot."
+      ]
+    },
+    {
+      "id": "strafe-bots",
+      "name": "Strafing Bots: Rifle Taps",
+      "category": "Precision",
+      "weapon": "rifle",
+      "duration": 60,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 60000,
+      "short": "Tap the heads of bots that ADAD, crouch and stutter like real players.",
+      "desc": "Humanoid bots with head, body and leg hitboxes strafe unpredictably, using the same acceleration and stopping as you do. A rifle headshot kills in one tap (160 damage) and body shots take four. This trains following and timing strafing heads.",
+      "tips": [
+        "Fire when the bot reverses direction, because that's when its head stops.",
+        "Tap or burst. Spraying climbs out of the head fast.",
+        "Track with small corrections instead of chasing big swings."
+      ]
+    },
+    {
+      "id": "micro",
+      "name": "Micro Adjust",
+      "category": "Precision",
+      "weapon": "precision",
+      "duration": 60,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 60000,
+      "short": "Tiny head-sized targets a few degrees away. Precision over speed.",
+      "desc": "Small head-sized targets spawn 1 to 6 degrees from the last one, which is the distance of a correction after your crosshair placement is slightly off. Misses cost points, so precision matters more than raw speed.",
+      "tips": [
+        "Move with your fingers and wrist, not your arm.",
+        "Don't click until the crosshair has settled on the target.",
+        "Grip lightly. A tense hand overshoots small corrections."
+      ]
+    },
+    {
+      "id": "macro",
+      "name": "Macro Flicks",
+      "category": "Precision",
+      "weapon": "precision",
+      "duration": 60,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 60000,
+      "short": "Wide flicks of 30 to 150 degrees. Tracks overshoot and undershoot.",
+      "desc": "Targets spawn far to your side, like an enemy appearing off-angle or a teammate calling a flank. Every flick is analysed: clean, overshoot (you passed the target) or undershoot (you stopped short and corrected). Use the ratio to tune your sensitivity and arm movement.",
+      "tips": [
+        "Mostly overshooting usually means tension or a sensitivity that's too high for you.",
+        "Mostly undershooting means you're hesitating. Commit to the flick.",
+        "One big arm movement and one small wrist correction. No more."
+      ]
+    },
+    {
+      "id": "sniper",
+      "name": "Sniper: Strafing Targets",
+      "category": "Sniper",
+      "weapon": "sniper",
+      "duration": 60,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 60000,
+      "short": "Bolt-action scoped rifle vs ADAD strafers and doorway crossers.",
+      "desc": "A heavy bolt-action sniper with 2.5x and 5x zoom (right-click cycles). Body shots kill and legs do not. Bots strafe at mid range or sprint across doorway gaps at long range. Unscoped and moving shots are wildly inaccurate, so stop, scope and click.",
+      "tips": [
+        "Against strafers, aim where the bot reverses and fire as it stops.",
+        "Against crossers, pre-aim the doorway and fire as the body enters, not when you see it.",
+        "The rifle unscopes after every shot, so re-scope with right-click.",
+        "Scoped sensitivity follows Valorant's Scoped Sensitivity Multiplier (Settings)."
+      ]
+    },
+    {
+      "id": "reaction",
+      "name": "Reaction Time",
+      "category": "Reaction",
+      "weapon": "precision",
+      "duration": 0,
+      "timeLimit": 180,
+      "order": "asc",
+      "unit": "ms",
+      "minScore": 80,
+      "maxScore": 5000,
+      "short": "Click the instant the panel turns green. Hard adds blue decoys.",
+      "desc": "This is a pure visual reaction test over 12 trials. False starts and clicking a blue decoy each add a 25 ms penalty to your average. Hard mode adds go/no-go decoys, which train you not to shoot teammates or bait utility.",
+      "tips": [
+        "Stay relaxed with your finger resting on the button.",
+        "Look at the centre of the panel, not the edges.",
+        "Your monitor and mouse latency are included, the same as in a real game."
+      ]
+    },
+    {
+      "id": "angle-hold",
+      "name": "Angle Hold",
+      "category": "Reaction",
+      "weapon": "rifle",
+      "duration": 60,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 60000,
+      "short": "Hold a doorway. Kill swingers before their reaction timer fires.",
+      "desc": "You hold the angle while enemies swing out from behind the walls, stop and shoot back after their reaction time. Kill them first. Wide swingers sprint through and jigglers bait your shot. Good crosshair placement at the wall edge and head height is what wins this.",
+      "tips": [
+        "Keep your crosshair on the edge of the wall at head height.",
+        "Let wide swingers run into your crosshair instead of chasing them.",
+        "Don't shoot jiggle peeks that won't stop. Wait for a committed swing."
+      ]
+    },
+    {
+      "id": "peek-duel",
+      "name": "Peek Duels",
+      "category": "Simulation",
+      "weapon": "rifle",
+      "duration": 0,
+      "timeLimit": 180,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 60000,
+      "short": "10 rounds: swing off cover, counter-strafe, kill, without dying.",
+      "desc": "This is a game-like 1v1 peek simulation. Enemies hold angles you can't see from behind your cover. Peek, find them, counter-strafe and kill them before their reaction time runs out. Every second you're exposed counts against you, and fast clean peeks score the most.",
+      "tips": [
+        "Swing wide and fast, then counter-strafe into the shot. Being exposed while slow gets you killed.",
+        "Moving targets are harder for the enemy to hit, but you can't shoot back accurately while moving.",
+        "Clear one side at a time. Peeking both sides at once exposes you to two angles."
+      ]
+    },
+    {
+      "id": "air-course",
+      "name": "Air Strafe Course",
+      "category": "Movement",
+      "weapon": "knife",
+      "duration": 0,
+      "timeLimit": 240,
+      "order": "asc",
+      "unit": "time",
+      "minScore": 4000,
+      "maxScore": 600000,
+      "short": "Time trial over gaps. Curve mid-air around walls to land.",
+      "desc": "A platform time trial with the knife out (fastest run speed). Some landings sit behind walls and can only be reached by curving mid-air. Hold the strafe key in the direction you turn your mouse and your velocity follows your view. Pressing A or D alone barely moves you, and you can't gain speed, so it works like Valorant's air control and not bunny-hopping.",
+      "tips": [
+        "To curve right, hold D and sweep the mouse right smoothly. Don't hold W.",
+        "Before a curve, run along the orange stripe (the inside line) and jump at the very edge.",
+        "Turning the mouse faster than your velocity can follow costs speed.",
+        "Falling sends you back to the last checkpoint with a +2s penalty."
+      ]
+    },
+    {
+      "id": "silent-jump",
+      "name": "Silent Jumps",
+      "category": "Movement",
+      "weapon": "rifle",
+      "duration": 0,
+      "timeLimit": 180,
+      "order": "asc",
+      "unit": "time",
+      "minScore": 6000,
+      "maxScore": 600000,
+      "short": "Crouch-jump onto ledges and land without making a sound.",
+      "desc": "Six ledges that a normal jump can't reach, all inside a sound zone. Hold Walk the whole way: a jump is only silent while Walk is held, and walking speed also keeps your landings quiet. Crouch-jump onto each ledge: crouching in the air pulls your legs up so your feet clear the edge, and because you land near the top of your jump the landing is silent too. Walk down the steps on the far side, since a small drop at walking speed is silent. Every footstep, jump or landing that would be heard costs +2s.",
+      "tips": [
+        "Keep Walk held when you press jump. Jumping without it is always heard, even when standing still.",
+        "Holding Walk silences the jump even straight out of a run, but you'd still be moving fast, and a fast landing is heard.",
+        "Approach at walking speed. A landing while moving faster than a walk is loud even if the drop is tiny.",
+        "Press crouch as you jump (or crouch first, then jump). Crouching late, after the top of your jump, may not clear the ledge.",
+        "You can release crouch before you touch down and still land silently. What matters is how far you fall, not your stance.",
+        "Don't jump down from a ledge. A full drop is always heard, so take the steps."
+      ]
+    },
+    {
+      "id": "move-course",
+      "name": "Movement Course",
+      "category": "Simulation",
+      "weapon": "rifle",
+      "duration": 0,
+      "timeLimit": 240,
+      "order": "asc",
+      "unit": "time",
+      "minScore": 8000,
+      "maxScore": 600000,
+      "short": "Silent walk zones, crouch vents, box climbs, a shooting gate and a held room.",
+      "desc": "A time trial that mixes the movement you use in real rounds. Walk silently through the sound zone and crouch-jump its ledge without being heard (each running footstep, jump without Walk, or loud landing costs +1s), crouch through the vent, climb boxes, counter-strafe to clear the shooting gallery that opens the gate, then clear a held room without getting traded.",
+      "tips": [
+        "Hold Shift in the purple zone. Walking makes no footstep sound.",
+        "Hold crouch before you reach the vent so you don't bump the ceiling.",
+        "In the gallery, stop fully before every shot. Moving shots miss.",
+        "Peek the final room with a quick swing. Every 0.45s you're exposed adds +2s."
+      ]
+    }
+  ]
+}

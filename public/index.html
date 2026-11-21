@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StrafeLab · Valorant Aim & Movement Trainer</title>
+  <meta name="description" content="Browser aim and movement trainer tuned to Valorant: counter-strafing, strafe shooting, air strafing, sniper, flicks, reaction, peeks, with parties and leaderboards.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230c111c'/%3E%3Cpath d='M16 6v7M16 19v7M6 16h7M19 16h7' stroke='%232de2c2' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v8M16 19v8M5 16h8M19 16h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+        <div><b>STRAFE<span>LAB</span></b><small>Valorant aim &amp; movement trainer</small></div>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button data-tab="train" class="active">Train</button>
+        <button data-tab="leaderboard">Leaderboards</button>
+        <button data-tab="settings">Settings</button>
+        <button data-tab="guide">Guide</button>
+      </nav>
+      <div class="me">
+        <span id="net-status" class="net offline">offline</span>
+        <label class="name-field"><span>Name</span><input id="name-input" maxlength="16" spellcheck="false" autocomplete="off"></label>
+      </div>
+    </header>
+
+    <main class="layout">
+      <div class="content">
+        <section id="tab-train" class="tab">
+          <div class="section-head">
+            <h1>Training</h1>
+            <div id="cat-chips" class="chips"></div>
+          </div>
+          <div class="train-body">
+            <div id="scenario-grid" class="grid"></div>
+            <aside id="scenario-detail" class="detail panel"></aside>
+          </div>
+        </section>
+
+        <section id="tab-leaderboard" class="tab" hidden>
+          <div class="section-head">
+            <h1>Leaderboards</h1>
+            <div class="lb-controls">
+              <select id="lb-scenario" aria-label="Drill"></select>
+              <div id="lb-diff" class="seg"></div>
+              <div id="lb-filter" class="seg"></div>
+            </div>
+          </div>
+          <div class="lb-body">
+            <div class="panel"><table class="lb-table"><thead><tr><th>#</th><th>Player</th><th>Score</th><th>Details</th><th>When</th></tr></thead><tbody id="lb-rows"></tbody></table></div>
+            <div class="panel history">
+              <h3>Your progress</h3>
+              <div id="lb-history"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-settings" class="tab" hidden>
+          <div class="section-head"><h1>Settings</h1><p class="muted">Saved in this browser. Match these to your Valorant settings.</p></div>
+          <div id="settings-body" class="settings-grid"></div>
+        </section>
+
+        <section id="tab-guide" class="tab" hidden>
+          <div class="section-head"><h1>Guide</h1><p class="muted">What each drill trains and how the mechanic works in Valorant.</p></div>
+          <div id="guide-body" class="guide-grid"></div>
+        </section>
+      </div>
+      <aside id="party-panel" class="party panel"></aside>
+    </main>
+  </div>
+
+  <div id="game-root" hidden>
+    <canvas id="game-canvas"></canvas>
+    <canvas id="crosshair"></canvas>
+    <div id="scope-overlay" hidden><div class="lens"></div><div class="scope-h"></div><div class="scope-v"></div></div>
+    <div id="hud">
+      <div id="hud-scenario"></div>
+      <div class="hud-top"><div id="hud-timer"></div><div id="hud-score"></div></div>
+      <div id="hud-stats"></div>
+      <div id="hud-party" hidden></div>
+      <div id="hud-board" hidden></div>
+      <div id="hud-banner"></div>
+      <div id="hud-feedback"></div>
+      <div id="hud-hitmarker"><i></i><i></i><i></i><i></i></div>
+      <div id="hud-exposed" hidden></div>
+      <div id="hud-bottom">
+        <div id="hud-speed">
+          <div class="bar"><div id="hud-speed-fill"></div><div id="hud-speed-mark"></div></div>
+          <div id="hud-speed-label"></div>
+        </div>
+        <div id="hud-bolt" hidden><div id="hud-bolt-fill"></div></div>
+        <div id="hud-weapon"></div>
+      </div>
+      <div id="hud-fps"></div>
+      <div id="hud-vignette"></div>
+    </div>
+    <div id="overlay-countdown" hidden></div>
+    <div id="overlay-lock" class="overlay" hidden>
+      <div class="card">
+        <h2>Click to start</h2>
+        <p>Your mouse will be captured. Press <kbd>Esc</kbd> at any time to pause.</p>
+      </div>
+    </div>
+    <div id="overlay-pause" class="overlay" hidden>
+      <div class="card">
+        <h2>Paused</h2>
+        <p class="pause-note"></p>
+        <div class="btns">
+          <button data-act="resume" class="primary">Resume</button>
+          <button data-act="restart">Restart</button>
+          <button data-act="fullscreen">Fullscreen</button>
+          <button data-act="quit" class="danger">Quit</button>
+        </div>
+        <div class="keys">
+          <span><kbd>W A S D</kbd> move</span><span><kbd>Shift</kbd> walk</span><span><kbd>Ctrl</kbd>/<kbd>C</kbd> crouch</span>
+          <span><kbd>Space</kbd> jump</span><span><kbd>LMB</kbd> fire</span><span><kbd>RMB</kbd> scope</span>
+          <span><kbd>R</kbd> reload</span><span><kbd>Tab</kbd> party board</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="results" class="overlay modal" hidden><div class="card wide" id="results-card"></div></div>
+  <div id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

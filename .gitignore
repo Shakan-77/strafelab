@@ -1,0 +1,4 @@
+# leaderboard written by server.py at runtime (top-level only, not public/data)
+/data/
+__pycache__/
+*.pyc
