@@ -7,9 +7,9 @@
  * your 150 HP (100 health + 50 shields), so one body hit doesn't kill you.
  */
 export const BOT_SKILL = {
-  easy: { reaction: 0.5, interval: 0.16, hitStill: 0.7, hitMoving: 0.3, hitAir: 0.15, head: 0.25 },
-  medium: { reaction: 0.38, interval: 0.13, hitStill: 0.8, hitMoving: 0.4, hitAir: 0.2, head: 0.35 },
-  hard: { reaction: 0.28, interval: 0.11, hitStill: 0.88, hitMoving: 0.5, hitAir: 0.25, head: 0.45 },
+  easy: { reaction: 0.45, interval: 0.15, hitStill: 0.75, hitMoving: 0.35, hitAir: 0.18, head: 0.3 },
+  medium: { reaction: 0.34, interval: 0.12, hitStill: 0.85, hitMoving: 0.45, hitAir: 0.23, head: 0.4 },
+  hard: { reaction: 0.25, interval: 0.105, hitStill: 0.92, hitMoving: 0.55, hitAir: 0.28, head: 0.5 },
 };
 
 export const PLAYER_HP = 150;

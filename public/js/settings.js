@@ -107,6 +107,7 @@ export const DEFAULTS = {
   modes: DEFAULT_MODES,
   fullscreenPlay: true,
   rifleSkin: 'standard',
+  weaponChoice: {}, // drill id → weapon picked before starting
   showSpeed: true,
   showFeedback: true,
   showFps: true,

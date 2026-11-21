@@ -143,10 +143,30 @@ function renderGrid() {
   }));
 }
 
+// ------------------------------------------------------------------ weapon choice
+// Drills built around a rifle, sniper or knife let you pick your gun first. The knife (Valorant's
+// fastest run speed, 6.75 m/s vs 5.40 rifle / 5.13 sniper) is only offered where you don't need to
+// shoot. Runs with a non-default weapon are practice: not posted to the leaderboard.
+const PICKABLE = ['rifle', 'sniper', 'knife'];
+const NO_SHOOT = new Set(['air-course', 'silent-jump']);
+
+function weaponOptions(m) {
+  if (!PICKABLE.includes(m.weapon)) return null;
+  return ['rifle', 'sniper', ...(NO_SHOOT.has(m.id) ? ['knife'] : [])];
+}
+
+function chosenWeapon(m) {
+  const opts = weaponOptions(m);
+  const w = (S.settings.weaponChoice || {})[m.id];
+  return opts && opts.includes(w) ? w : m.weapon;
+}
+
 function renderDetail() {
   const m = S.byId[S.selected];
   if (!m) return;
-  const w = WEAPONS[m.weapon];
+  const w = WEAPONS[chosenWeapon(m)];
+  const wOpts = weaponOptions(m);
+  const practice = w.id !== m.weapon;
   const pb = personalBest(m, S.difficulty);
   const isLeader = S.party && S.party.leader === net.id;
   const key = `${m.id}:${S.difficulty}:global`;
@@ -163,7 +183,15 @@ function renderDetail() {
       renderDetail();
       requestLb(m.id, d, 'global', 5);
     })),
-    el('div', { class: 'kv' }, el('span', {}, 'Weapon'), el('b', {}, `${w.name}${w.note ? ` · ${w.note}` : ''}`)),
+    wOpts
+      ? el('div', { class: 'kv' }, el('span', {}, 'Weapon'), seg(wOpts.map((id) => [id, WEAPONS[id].name]), w.id, (id) => {
+        S.settings.weaponChoice = { ...(S.settings.weaponChoice || {}), [m.id]: id };
+        saveSettings(S.settings);
+        renderDetail();
+      }))
+      : null,
+    el('div', { class: 'kv' }, el('span', {}, wOpts ? '' : 'Weapon'), el('b', {}, `${w.name}${w.note ? ` · ${w.note}` : ''} · ${w.runSpeed.toFixed(2)} m/s`)),
+    practice ? el('p', { class: 'muted small' }, `Practice weapon: runs aren't posted to the leaderboard or saved as a PB (this drill's leaderboard uses the ${WEAPONS[m.weapon].name}).`) : null,
     el('div', { class: 'kv' }, el('span', {}, 'Length'), el('b', {}, length)),
     el('div', { class: 'kv' }, el('span', {}, 'Your best'),
       pb ? el('div', { class: 'detail-progress' }, el('b', { class: 'accent' }, fmtScore(m, pb.score)),
@@ -840,7 +868,8 @@ function startSolo(id, diff) {
     return;
   }
   audio.ensure();
-  startGame(S.byId[id], diff, (Math.random() * 2 ** 31) >>> 0, { countdown: 3 });
+  const meta = S.byId[id];
+  startGame(meta, diff, (Math.random() * 2 ** 31) >>> 0, { countdown: 3, weapon: chosenWeapon(meta) });
 }
 
 function backToMenu() {
@@ -859,13 +888,14 @@ function onFinish(res) {
   const meta = res.meta;
   const key = `${meta.id}:${res.difficulty}`;
   const prev = personalBest(meta, res.difficulty);
-  const pb = !res.dnf && (!prev || better(meta, res.score, prev.score));
-  if (!res.dnf) pushHistory(key, { score: res.score, ts: Date.now(), stats: statsObj(res.stats?.slice(0, 3)) });
-  S.results = { ...res, pb, prev, rank: null };
+  const practice = !!res.weaponId && res.weaponId !== meta.weapon && !res.party;
+  const pb = !res.dnf && !practice && (!prev || better(meta, res.score, prev.score));
+  if (!res.dnf && !practice) pushHistory(key, { score: res.score, ts: Date.now(), stats: statsObj(res.stats?.slice(0, 3)) });
+  S.results = { ...res, pb, prev, rank: null, practice };
   if (res.party) {
     net.send({ t: 'run_result', runId: res.party.runId, score: res.score, display: res.display, stats: statsObj(res.stats), dnf: !!res.dnf });
   }
-  if (!res.dnf && net.online) {
+  if (!res.dnf && !practice && net.online) {
     net.send({ t: 'score_submit', scenario: meta.id, difficulty: res.difficulty, score: res.score, display: res.display, stats: statsObj(res.stats) });
     S.results.submitting = true;
   }
@@ -885,6 +915,7 @@ function renderResults() {
   const meta = r.meta;
   const badges = [];
   if (r.dnf) badges.push(el('span', { class: 'badge bad' }, r.reason === 'timeout' ? 'TIME LIMIT REACHED' : 'NOT COMPLETED'));
+  if (r.practice) badges.push(el('span', { class: 'badge' }, `PRACTICE · ${WEAPONS[r.weaponId].name.toUpperCase()} (NOT RANKED)`));
   if (r.pb) badges.push(el('span', { class: 'badge good' }, r.prev ? 'NEW PERSONAL BEST' : 'FIRST RUN'));
   else if (r.prev && !r.dnf) badges.push(el('span', { class: 'badge' }, `PB ${fmtScore(meta, r.prev.score)}`));
   if (r.rank) badges.push(el('span', { class: 'badge accent' }, r.improved ? `GLOBAL #${r.rank}` : `YOUR BEST: GLOBAL #${r.rank}`));

@@ -33,6 +33,7 @@ export const MOVE = {
   gravity: 16.5,
   jumpVel: 5.55,
   airAccel: 5,
+  airTurn: (120 * Math.PI) / 180, // rad/s your path swings toward your keys mid-air (estimate)
   airCap: 0.7, // steering projection cap for running jumps
   airStartCap: 1.8, // estimated speed available when jumping from rest
   walkMult: 0.56,
@@ -157,6 +158,7 @@ export class Player {
     this.prevEye += d;
     this.tucked = false;
     this.crouched = false;
+    if (!this.onGround) this.uncrouchedMidAir = true; // crouch-jump released in the air
     return true;
   }
 
@@ -199,7 +201,10 @@ export class Player {
       if (!this.onGround) this.tuck(world);
     } else if (!wantCrouch && this.crouched) {
       if (this.tucked) this.untuck(world);
-      else if (this.canStand(world)) this.crouched = false;
+      else if (this.canStand(world)) {
+        this.crouched = false;
+        if (!this.onGround) this.uncrouchedMidAir = true;
+      }
     }
     const targetEye = this.crouched ? MOVE.eyeCrouch : MOVE.eyeStand;
     this.eye += (targetEye - this.eye) * Math.min(1, dt * 16);
@@ -230,6 +235,7 @@ export class Player {
       this.vel.y = MOVE.jumpVel;
       this.onGround = false;
       this.jumpBuffer = 0;
+      this.uncrouchedMidAir = false;
       this.takeoffSpeed = Math.hypot(vx, vz);
       this.onEvent('jump', {
         speed: this.takeoffSpeed,
@@ -309,6 +315,18 @@ export class Player {
           vx *= target / sp1;
           vz *= target / sp1;
         }
+        // Unreal-style air control: your path also swings toward the direction your keys point
+        // (A/D alone, or W while turning the mouse), at a limited rate and without changing speed.
+        const sp2 = Math.hypot(vx, vz);
+        if (sp2 > 0.3) {
+          const cur = Math.atan2(vz, vx);
+          const want = Math.atan2(wz, wx);
+          let diff = want - cur;
+          diff -= Math.round(diff / (Math.PI * 2)) * Math.PI * 2;
+          const step = Math.sign(diff) * Math.min(Math.abs(diff), MOVE.airTurn * dt);
+          vx = Math.cos(cur + step) * sp2;
+          vz = Math.sin(cur + step) * sp2;
+        }
       }
       const cap = Math.max(this.takeoffSpeed, startingSpeed);
       const sp = Math.hypot(vx, vz);
@@ -331,6 +349,9 @@ export class Player {
       const vy = Math.max(0, -fallSpeed);
       const wasTucked = this.tucked;
       this.tucked = false; // now simply crouched on the ground
+      // Valorant silent jump: crouch-jump, release crouch mid-air, land at walking speed = no sound
+      const crouchRelease = !!this.uncrouchedMidAir && hBefore <= this.quietSpeed;
+      this.uncrouchedMidAir = false;
       // VALORANT: every gun is +7° inaccurate for 0.225 s after landing (ignore tiny step-offs)
       if (this.airTime > 0.1) this.landPenalty = 0.225;
       this.onEvent('land', {
@@ -340,7 +361,8 @@ export class Player {
         airTime: this.airTime,
         tucked: wasTucked,
         crouched: this.crouched,
-        loud: this.isLoudLanding(vy, hBefore),
+        crouchRelease,
+        loud: !crouchRelease && this.isLoudLanding(vy, hBefore),
       });
       this.airTime = 0;
     }

@@ -508,7 +508,8 @@ export class Game {
     this.loadOpts = opts;
     this.party = opts.party || null;
     this.rng = new RNG(seed);
-    this.weapon = WEAPONS[meta.weapon];
+    // the player may pick a different gun (or the knife) before starting
+    this.weapon = WEAPONS[opts.weapon] || WEAPONS[meta.weapon];
     this.ammo = this.weapon.mag;
     this.reloadT = 0;
     this.fireCooldown = 0;
@@ -618,6 +619,7 @@ export class Game {
     res.reason = reason;
     res.meta = this.meta;
     res.difficulty = this.difficulty;
+    res.weaponId = this.weapon.id;
     res.party = this.party;
     if (document.pointerLockElement) document.exitPointerLock();
     this.locked = false;

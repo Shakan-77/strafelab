@@ -23,7 +23,7 @@ export const GUIDE = [
   {
     title: 'Air strafing',
     drill: 'air-course',
-    body: 'In the air, pressing A or D on its own barely changes your path. Holding the strafe key in the same direction you sweep your mouse makes your velocity follow your view, so you can curve around corners and onto ledges. Unlike CS, turning never costs speed, and like Valorant you can\'t gain any: air speed is capped at your take-off speed, so bunny-hopping travels exactly as far as running. Pressing against your motion mid-air only slows you a little.',
+    body: 'In the air your path swings toward the keys you hold (about 120°/s with A or D alone), as in Valorant\'s Unreal-based movement. Holding the strafe key in the same direction you sweep your mouse bends it faster still, so you can curve around corners and onto ledges. Unlike CS, turning never costs speed, and like Valorant you can\'t gain any: air speed is capped at your take-off speed, so bunny-hopping travels exactly as far as running. Pressing against your motion mid-air only slows you a little.',
     points: [
       'Curve right: release W, hold D, sweep the mouse right smoothly.',
       'Your path can only bend so fast (about 280°/s), so start turning early rather than flicking.',
@@ -73,7 +73,7 @@ export const GUIDE = [
   {
     title: 'Silent jumps',
     drill: 'silent-jump',
-    body: 'A jump can be heard twice: at take-off and on landing. The take-off is silent whenever you hold Walk or Crouch as you press jump, even straight out of a run. With neither, it\'s heard, even from a standstill. A landing is silent when you barely fall at the end of your jump and you\'re still at walking speed. Crouching while you jump pulls your legs up, so you clear a ledge that a normal jump can\'t reach and land close to the top of your jump, a short and silent fall. You can stand back up before touching down and the landing stays silent, because the sound depends on how hard you hit the ground, not on your stance.',
+    body: 'A jump can be heard twice: at take-off and on landing. The take-off is silent whenever you hold Walk or Crouch as you press jump, even straight out of a run. With neither, it\'s heard, even from a standstill. A landing is silent when you barely fall at the end of your jump and you\'re still at walking speed. Crouching while you jump pulls your legs up, so you clear a ledge that a normal jump can\'t reach and land close to the top of your jump, a short and silent fall. Releasing crouch mid-air after a crouch-jump also lands silently at walking speed, even on flat ground.',
     points: [
       'Hold Walk, then jump and crouch together, and you get onto the ledge without a sound. A crouch-jump is silent at take-off even without Walk.',
       'Bind Walk and Jump to the same key if pressing both together is awkward.',
@@ -112,7 +112,7 @@ export const NUMBERS = [
   ['Walk / crouch', '56% / 45% of run speed. Both are silent.', 'est'],
   ['Rifle stop time', 'From full speed to the 27.5% cutoff: ~106 ms on release, ~100 ms on reversal. Full stop on release: ~160 ms.', 'est'],
   ['Rifle acceleration', '~0.26 s from standstill to run speed', 'est'],
-  ['Enemy bots', 'React in 0.50 / 0.38 / 0.28 s (easy/medium/hard), then rifle taps vs your 150 HP; they hit you less while you move or jump', 'est'],
+  ['Enemy bots', 'React in 0.45 / 0.34 / 0.25 s (easy/medium/hard), then rifle taps vs your 150 HP; they hit you less while you move or jump', 'est'],
   ['Air strafing', 'Run before take-off to carry momentum. Slow jumps can build up to 1.8 m/s with directional input.', 'est'],
   ['Jump', '~0.93 m apex, ~0.67 s in the air', 'est'],
   ['Crouch-jump', 'Crouching in the air lifts your feet 0.25 m (reach ~1.16 m)', 'est'],
