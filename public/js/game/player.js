@@ -1,16 +1,17 @@
 import * as THREE from 'three';
+import { clamp } from '../util.js';
 
 /**
  * Movement tuned to feel like Valorant (metres and seconds):
  * - run 5.4 m/s with a rifle (6.75 with knife) [official wiki]; walk 56%, crouch 45% [estimates]
  * - acceleration: ~0.26 s from standstill to run speed (Unreal default; estimate)
- * - braking fitted to Riot's published stop timings: releasing the key reaches 25% speed in
- *   ~110 ms and stops in ~160 ms; counter-strafing is only ~6 ms faster (~104 ms to 25%).
+ * - estimated braking: releasing the key crosses the rifle's 27.5% deadzone in ~106 ms and
+ *   comes to rest in ~160 ms. Pressing the opposite key crosses the deadzone in ~100 ms.
  *   Unreal-style braking: dv/dt = -(brakeFriction·v + brakeDecel)
  * - jump apex ~0.93 m, ~0.67 s air time [estimates]
  * - air strafing: holding the strafe key toward your mouse turn bends your path to follow your
  *   view (like CS), but turning never costs speed (unlike CS), and you can't gain speed: air
- *   speed is capped at your take-off speed, so bunny hopping travels no further than running.
+ *   running jumps keep their take-off speed. Slow jumps have limited control up to 1.8 m/s.
  *   Pressing against your motion mid-air only bleeds speed slowly.
  * - crouch-jump: crouching in the air (or jumping while crouched) tucks your legs up, so your
  *   feet clear ledges a normal jump can't (~1.18 m instead of ~0.93 m)
@@ -24,18 +25,16 @@ export const MOVE = {
   tuckLift: 0.25,
   silentLandVy: 3.2,
   quietMult: 1.08, // × walk speed: above this, footsteps / jumps / landings are heard
-  // ~0.26 s from standstill to run speed: Unreal's default max acceleration (20.48 m/s²), which
-  // a community fit of Riot's stop timings also lands on. Riot hasn't published this (estimate).
-  accel: 20.8,
-  friction: 28, // sideways friction while changing direction on the ground
+  accel: 20.8, // estimated ~0.26 s from standstill to rifle run speed
   brakeFriction: 3.77, // 1/s  } fitted so 5.4 m/s → 25% in ~110 ms, full stop in ~160 ms
   brakeDecel: 24.5, // m/s² }
-  counterExtra: 2.2, // m/s² extra while pressing the opposite key (~6 ms faster, per Riot)
+  counterExtra: 2.2, // estimated extra m/s² while pressing the opposite key
   airBrake: 3, // m/s² when pressing against your motion mid-air (estimate: slight, no air-stop)
   gravity: 16.5,
   jumpVel: 5.55,
   airAccel: 5,
-  airCap: 0.7,
+  airCap: 0.7, // steering projection cap for running jumps
+  airStartCap: 1.8, // estimated speed available when jumping from rest
   walkMult: 0.56,
   crouchMult: 0.45,
   radius: 0.32,
@@ -48,9 +47,10 @@ export const MOVE = {
 
 const EPS = 1e-4;
 
-/** Unreal-style braking for one tick: dv/dt = -(friction·v + decel + extra). Never below 0. */
-function brake(speed, dt, extra) {
-  return Math.max(0, speed - (MOVE.brakeFriction * speed + MOVE.brakeDecel + extra) * dt);
+/** Integrate dv/dt = -(friction·v + decel) across the tick. */
+function brake(speed, dt, decel = MOVE.brakeDecel) {
+  const loss = -Math.expm1(-MOVE.brakeFriction * dt);
+  return Math.max(0, speed - (speed + decel / MOVE.brakeFriction) * loss);
 }
 
 export class Player {
@@ -92,6 +92,7 @@ export class Player {
     this.runSpeed = runSpeed;
     this.accurateSpeed = accurateSpeed;
     this.jumpBuffer = 0;
+    this.takeoffSpeed = 0;
     this.stepAcc = 0;
     this.stop = null;
   }
@@ -204,8 +205,8 @@ export class Player {
     this.eye += (targetEye - this.eye) * Math.min(1, dt * 16);
 
     // wish direction from WASD relative to view yaw
-    let fx = locked ? 0 : inp.f - inp.b;
-    let sx = locked ? 0 : inp.r - inp.l;
+    const fx = locked ? 0 : inp.f - inp.b;
+    const sx = locked ? 0 : inp.r - inp.l;
     const sinY = Math.sin(yaw);
     const cosY = Math.cos(yaw);
     let wx = -sinY * fx + cosY * sx;
@@ -221,6 +222,7 @@ export class Player {
     const speedBefore = this.hspeed();
     let vx = this.vel.x;
     let vz = this.vel.z;
+    const inputAlignment = vx * wx + vz * wz;
 
     if (this.jumpBuffer > 0) this.jumpBuffer -= dt;
     if (this.landPenalty > 0) this.landPenalty -= dt;
@@ -241,40 +243,46 @@ export class Player {
 
     if (this.onGround) {
       if (wishSpeed > 0) {
-        let along = vx * wx + vz * wz;
+        let along = inputAlignment;
         let px = vx - along * wx;
         let pz = vz - along * wz;
         // velocity that isn't in the new direction brakes on the same curve as a release
         const pl = Math.hypot(px, pz);
         if (pl > 0) {
-          const k = brake(pl, dt, 0) / pl;
+          const k = brake(pl, dt) / pl;
           px *= k;
           pz *= k;
         }
         if (along < 0) {
           // counter-strafe: brake (a hair harder than releasing) until you stop, then accelerate
-          const left = -along;
-          const slowed = brake(left, dt, MOVE.counterExtra);
-          along = slowed > 0 ? -slowed : Math.min(wishSpeed, MOVE.accel * dt * 0.5);
+          const decel = MOVE.brakeDecel + MOVE.counterExtra;
+          const stopTime = Math.log1p(-along * MOVE.brakeFriction / decel) / MOVE.brakeFriction;
+          along = stopTime >= dt ? -brake(-along, dt, decel) : Math.min(wishSpeed, MOVE.accel * (dt - stopTime));
         } else if (along < wishSpeed) {
           along = Math.min(wishSpeed, along + MOVE.accel * dt);
         } else {
-          along = Math.max(wishSpeed, brake(along, dt, 0)); // e.g. switching from run to walk
+          along = Math.max(wishSpeed, brake(along, dt)); // e.g. switching from run to walk
         }
         vx = along * wx + px;
         vz = along * wz + pz;
-      } else {
-        const sp = Math.hypot(vx, vz);
-        if (sp > 0) {
-          const k = brake(sp, dt, 0) / sp;
-          vx *= k;
-          vz *= k;
+        // Turn without gaining speed. A lower stance speed still takes time to reach.
+        const speed = Math.hypot(vx, vz);
+        const cap = Math.max(wishSpeed, brake(speedBefore, dt));
+        if (speed > cap) {
+          vx *= cap / speed;
+          vz *= cap / speed;
         }
+      } else if (speedBefore > 0) {
+        const k = brake(speedBefore, dt) / speedBefore;
+        vx *= k;
+        vz *= k;
       }
     } else if (wishSpeed > 0) {
-      const sp0 = Math.hypot(vx, vz);
+      const sp0 = speedBefore;
       const ux = sp0 > 1e-3 ? vx / sp0 : 0;
       const uz = sp0 > 1e-3 ? vz / sp0 : 0;
+      const startingSpeed = Math.min(wishSpeed, MOVE.airStartCap);
+      const buildingSpeed = sp0 < startingSpeed;
       // "pressing against your motion" = input opposes velocity while you're still moving roughly
       // the way you face (e.g. S while flying forward); over-turning the mouse is not braking
       const facing = -Math.sin(yaw) * ux - Math.cos(yaw) * uz;
@@ -287,7 +295,8 @@ export class Player {
       } else {
         // strafe acceleration bends the path toward your view when strafe + mouse turn agree...
         const cur = vx * wx + vz * wz;
-        const add = Math.min(wishSpeed, MOVE.airCap) - cur;
+        const drive = buildingSpeed ? startingSpeed : Math.min(wishSpeed, MOVE.airCap);
+        const add = drive - cur;
         if (add > 0) {
           const acc = Math.min(MOVE.airAccel * wishSpeed * dt, add);
           vx += acc * wx;
@@ -295,13 +304,13 @@ export class Player {
         }
         // ...but, unlike CS, turning keeps your speed exactly (no loss when over-turning, no gain)
         const sp1 = Math.hypot(vx, vz);
-        const target = Math.max(sp0, Math.min(sp1, MOVE.airCap));
+        const target = buildingSpeed ? Math.min(sp1, startingSpeed) : sp0;
         if (sp1 > 1e-6) {
           vx *= target / sp1;
           vz *= target / sp1;
         }
       }
-      const cap = Math.max(this.takeoffSpeed, MOVE.airCap);
+      const cap = Math.max(this.takeoffSpeed, startingSpeed);
       const sp = Math.hypot(vx, vz);
       if (sp > cap) {
         vx *= cap / sp;
@@ -317,6 +326,7 @@ export class Player {
     const hBefore = Math.hypot(this.vel.x, this.vel.z);
     if (!wasGround) this.airTime += dt;
     this.collide(world, dt);
+    if (wasGround && !this.onGround) this.takeoffSpeed = this.hspeed();
     if (!wasGround && this.onGround) {
       const vy = Math.max(0, -fallSpeed);
       const wasTucked = this.tucked;
@@ -347,30 +357,29 @@ export class Player {
       this.stepAcc = MOVE.stepDist * 0.6;
     }
 
-    this.trackStop(dt, speedBefore, sp, wx * wishSpeed, wz * wishSpeed);
+    this.trackStop(dt, speedBefore, sp, wishSpeed > 0, inputAlignment);
   }
 
   /** Measures how long it takes to get from full speed to accurate speed, and how. */
-  trackStop(dt, before, now, wishVx, wishVz) {
-    const along = (wishVx * this.vel.x + wishVz * this.vel.z) / Math.max(now, 1e-6);
-    if (!this.stop) {
-      if (this.onGround && before >= this.runSpeed * 0.75 && along <= 0.01) {
-        this.stop = { t: 0, counter: along < -0.01, from: before };
-      }
+  trackStop(dt, before, now, hasInput, alignment) {
+    if (!this.onGround) {
+      this.stop = null;
       return;
+    }
+    const counter = alignment < -0.01;
+    if (!this.stop && before >= this.runSpeed * 0.75 && (!hasInput || counter)) {
+      this.stop = { t: 0, counter, from: before };
     }
     const s = this.stop;
-    s.t += dt;
-    if (along < -0.01) s.counter = true;
-    if (along > 0.01 && now > this.accurateSpeed) {
-      this.stop = null; // resumed moving the same way
-      return;
-    }
+    if (!s) return;
+    s.counter ||= counter;
     if (now <= this.accurateSpeed) {
+      const fraction = clamp((before - this.accurateSpeed) / Math.max(before - now, 1e-6), 0, 1);
       this.stop = null;
-      this.onEvent('stop', { duration: s.t, counter: s.counter, from: s.from });
-    } else if (s.t > 1) {
-      this.stop = null;
+      this.onEvent('stop', { duration: s.t + dt * fraction, counter: s.counter, from: s.from });
+    } else {
+      s.t += dt;
+      if ((hasInput && alignment > 0.01) || s.t > 1) this.stop = null;
     }
   }
 

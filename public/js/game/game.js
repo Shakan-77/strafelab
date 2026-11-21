@@ -15,6 +15,9 @@ const TICK = 1 / 128; // Valorant servers run at 128 tick
 // Valorant: 103° horizontal FOV at 16:9, Hor+ on other aspect ratios → fixed vertical FOV
 const vfovFromHfov = (h) => (2 * Math.atan(Math.tan((h * DEG) / 2) / (16 / 9))) / DEG;
 const VFOV = vfovFromHfov(103);
+const PITCH_LIMIT = 89 * DEG;
+const CAPTURE_HINT = 'Your mouse will be captured. Press Esc to pause.';
+const CAPTURE_FAILED = 'Mouse capture failed. Click to retry. If it keeps failing, open StrafeLab in desktop Chrome or Edge.';
 // Keys the game never swallows: fullscreen toggle and devtools.
 const PASS_KEYS = new Set(['F11', 'F12']);
 
@@ -81,7 +84,11 @@ export class Game {
     this.modes = {};
     this.firing = false;
     this.locked = false;
-    this.frameDt = 1 / 60;
+    this.lockPending = false;
+    this.mouseX = 0;
+    this.mouseY = 0;
+    this.lastRawMotion = -Infinity;
+    this.acc = 0;
     this.fpsAcc = { t: 0, n: 0 };
     this.netT = { live: 0, pos: 0 };
     this.party = null;
@@ -169,7 +176,7 @@ export class Game {
       if (e.code === 'Escape') {
         // Esc always pauses. With keyboard lock the browser hands Esc to us instead of unlocking.
         if (this.locked && !this.debug) document.exitPointerLock();
-        else if (this.debug && this.locked) {
+        else if (!this.paused) {
           this.locked = false;
           this.pause();
         }
@@ -186,16 +193,22 @@ export class Game {
       if (this.inGame() && e.code !== 'Escape' && !PASS_KEYS.has(e.code)) e.preventDefault();
       if (this.held.delete(e.code)) this.inputUp(e.code);
     }, true);
-    window.addEventListener('blur', () => this.releaseAll());
+    window.addEventListener('blur', () => {
+      this.releaseAll();
+      if (!this.locked || this.lockPending) return;
+      if (document.pointerLockElement === this.canvas) document.exitPointerLock();
+      this.locked = false;
+      this.pause('Focus lost. Click Resume to capture the mouse again.');
+    });
     document.addEventListener('pointerlockchange', () => this.onLockChange());
+    document.addEventListener('pointerlockerror', () => {
+      if (!this.lockPending && !this.locked) this.showCaptureError();
+    });
     document.addEventListener('fullscreenchange', () => this.onFullscreenChange());
     document.addEventListener('mousedown', (e) => {
-      if (!this.inGame()) return;
-      if (e.button !== 0 && e.button !== 2) e.preventDefault(); // no middle-click autoscroll
-      if (!this.locked && !this.debug) return;
-      if (!this.locked && e.target !== this.canvas) return;
+      if (!this.acceptsMouseInput()) return;
+      e.preventDefault(); // keep gameplay clicks from starting a browser drag or selection
       const code = `Mouse${e.button}`;
-      if (this.held.has(code)) return;
       this.held.add(code);
       this.inputDown(code, e.timeStamp);
     }, true);
@@ -205,10 +218,14 @@ export class Game {
       const code = `Mouse${e.button}`;
       if (this.held.delete(code)) this.inputUp(code);
     }, true);
-    document.addEventListener('mousemove', (e) => {
-      if (this.state === 'idle' || this.state === 'finished') return;
-      if (this.locked) this.look(e.movementX, e.movementY);
-    });
+    const recordLook = (e) => this.queueLook(e);
+    document.addEventListener('mousemove', recordLook, { capture: true, passive: true });
+    this.canvas.addEventListener('pointerrawupdate', recordLook, { passive: true });
+    for (const type of ['dragstart', 'selectstart']) {
+      document.addEventListener(type, (e) => {
+        if (this.acceptsMouseInput()) e.preventDefault();
+      }, true);
+    }
     document.addEventListener(
       'wheel',
       (e) => {
@@ -278,6 +295,9 @@ export class Game {
   releaseAll() {
     this.held.clear();
     this.firing = false;
+    this.mouseX = this.mouseY = 0;
+    this.lastRawMotion = -Infinity;
+    if (this.modes.scope === 'hold' && this.zoomIndex) this.setZoom(0);
     this.hud.showBoard(false);
     this.syncInput();
   }
@@ -292,42 +312,82 @@ export class Game {
     i.crouch = this.modes.crouch === 'toggle' ? this.toggles.crouch : this.isHeld('crouch');
   }
 
+  acceptsMouseInput() {
+    return this.inGame() && !this.paused && (this.debug ? this.locked : document.pointerLockElement === this.canvas);
+  }
+
+  queueLook(event) {
+    if (!this.acceptsMouseInput()) return;
+    const dx = Number.isFinite(event.movementX) ? event.movementX : 0;
+    const dy = Number.isFinite(event.movementY) ? event.movementY : 0;
+    if (!dx && !dy) return;
+    if (event.type === 'pointerrawupdate') {
+      if (!this.settings.rawInput || event.pointerType !== 'mouse') return;
+      this.lastRawMotion = event.timeStamp;
+    } else if (event.timeStamp <= this.lastRawMotion) {
+      // Chromium sends the corresponding move with the same timestamp, or coalesces it.
+      return;
+    }
+    this.mouseX += dx;
+    this.mouseY += dy;
+  }
+
   /** Mouse counts → view angles using Valorant's yaw (0.07°/count × sens). */
   look(dx, dy) {
     let deg = VALORANT_YAW * this.settings.sens;
-    if (this.zoom > 1) deg *= this.settings.scopedMult / this.zoom;
+    if (this.zoom > 1) {
+      const multiplier = this.scopeLens() ? this.settings.scopedMult : this.settings.adsMult;
+      deg *= multiplier / this.zoom;
+    }
     this.yaw -= dx * deg * DEG;
-    this.pitch = clamp(this.pitch - dy * deg * DEG, -89 * DEG, 89 * DEG);
+    this.pitch = clamp(this.pitch - dy * deg * DEG, -PITCH_LIMIT, PITCH_LIMIT);
   }
 
-  /** Lock the mouse and, if enabled, go fullscreen with keyboard lock. Call from a click. */
-  requestLock() {
-    if (this.debug && !this.locked) {
-      // debug/test mode: run without pointer lock
+  /** Apply all pending counts before the next physics step, shot, or zoom change. */
+  flushLook() {
+    if (!this.mouseX && !this.mouseY) return;
+    this.look(this.mouseX, this.mouseY);
+    this.mouseX = this.mouseY = 0;
+  }
+
+  /** Request the pointer first so a raw-input retry can still use the click gesture. */
+  async requestLock(fullscreen = this.settings.fullscreenPlay && !this.fsDeclined) {
+    if (!this.inGame() || this.lockPending) return;
+    if (this.debug) {
       this.onLocked();
       return;
     }
-    this.lockPointer();
-    if (this.settings.fullscreenPlay && !this.fsDeclined && !document.fullscreenElement && document.fullscreenEnabled) this.enterFullscreen();
+    this.lockPending = true;
+    try {
+      if (document.pointerLockElement !== this.canvas) await this.lockPointer();
+      if (this.inGame() && document.pointerLockElement === this.canvas && fullscreen &&
+          !document.fullscreenElement && document.fullscreenEnabled) await this.enterFullscreen();
+    } catch {
+      this.showCaptureError();
+    } finally {
+      this.lockPending = false;
+    }
   }
 
-  lockPointer() {
+  async lockPointer() {
     const c = this.canvas;
-    try {
-      const p = this.settings.rawInput ? c.requestPointerLock({ unadjustedMovement: true }) : c.requestPointerLock();
-      if (p && p.catch) {
-        p.catch(() => {
-          try {
-            const q = c.requestPointerLock();
-            if (q && q.catch) q.catch(() => this.hud.banner('Click again to lock the mouse', 'warn'));
-          } catch {
-            /* ignore */
-          }
-        });
-      }
-    } catch {
-      c.requestPointerLock();
+    if (!this.settings.rawInput) {
+      await c.requestPointerLock();
+      return;
     }
+    try {
+      await c.requestPointerLock({ unadjustedMovement: true });
+    } catch (error) {
+      if (error.name !== 'NotSupportedError') throw error;
+      await c.requestPointerLock();
+      this.hud.banner('Raw input unavailable. Using system mouse input.', 'warn', 3);
+    }
+  }
+
+  showCaptureError() {
+    if (!this.inGame()) return;
+    const message = this.paused ? document.querySelector('#overlay-pause .pause-note') : document.getElementById('lock-note');
+    message.textContent = CAPTURE_FAILED;
   }
 
   /**
@@ -336,9 +396,9 @@ export class Game {
    */
   async enterFullscreen() {
     try {
-      navigator.keyboard?.lock?.().catch(() => {});
       await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
       this.ownFullscreen = true;
+      navigator.keyboard?.lock?.().catch(() => {});
     } catch {
       /* not allowed here (embedded frame, or no user gesture) */
     }
@@ -364,8 +424,7 @@ export class Game {
       return;
     }
     this.fsDeclined = false;
-    this.enterFullscreen();
-    this.lockPointer();
+    this.requestLock(true);
   }
 
   onFullscreenChange() {
@@ -378,13 +437,17 @@ export class Game {
   }
 
   onLockChange() {
-    const locked = document.pointerLockElement === this.canvas;
-    this.locked = locked;
-    if (locked) this.onLocked();
-    else if (this.state === 'running' || this.state === 'countdown') this.pause();
+    this.locked = document.pointerLockElement === this.canvas;
+    if (this.locked) {
+      if (this.inGame()) this.onLocked();
+      else document.exitPointerLock();
+    } else if (!this.paused && (this.state === 'running' || this.state === 'countdown')) {
+      this.pause('Mouse capture was released. Click Resume to continue.');
+    }
   }
 
   onLocked() {
+    this.lastRawMotion = -Infinity;
     this.audio.ensure();
     document.getElementById('overlay-lock').hidden = true;
     document.getElementById('overlay-pause').hidden = true;
@@ -393,15 +456,17 @@ export class Game {
     if (this.debug) this.locked = true;
   }
 
-  pause() {
+  pause(reason = '') {
     this.releaseAll();
     if (this.state === 'idle' || this.state === 'finished') return;
     this.paused = true;
     const p = document.getElementById('overlay-pause');
+    document.getElementById('overlay-lock').hidden = true;
     p.hidden = false;
-    p.querySelector('.pause-note').textContent = this.party
+    const timing = this.party
       ? 'Party run in progress, so the timer keeps running.'
-      : 'Paused. The timer is stopped.';
+      : 'The timer is stopped.';
+    p.querySelector('.pause-note').textContent = reason ? `${reason} ${timing}` : timing;
     p.querySelector('[data-act="restart"]').hidden = !!this.party;
     this.renderKeyHints();
   }
@@ -447,9 +512,11 @@ export class Game {
     this.ammo = this.weapon.mag;
     this.reloadT = 0;
     this.fireCooldown = 0;
+    this.tapReadyAt = -Infinity;
     this.timeSinceShot = 99;
     this.shotIndex = 0;
     this.recoil = 0;
+    this.mouseX = this.mouseY = 0;
     this.setZoom(0);
     this.scenario = new Cls(this, meta, difficulty, this.rng);
     this.scenario.build(this.world);
@@ -463,6 +530,8 @@ export class Game {
     this.frozenUntil = 0;
     this.countdown = opts.countdown ?? 3;
     this.lastCount = null;
+    this.acc = 0;
+    this.lastAlpha = 1;
     this.paused = false;
     this.held.clear();
     this.toggles = { walk: false, crouch: false };
@@ -478,6 +547,7 @@ export class Game {
     this.rebuildRayList();
     document.getElementById('overlay-pause').hidden = true;
     const lockEl = document.getElementById('overlay-lock');
+    document.getElementById('lock-note').textContent = CAPTURE_HINT;
     if (this.locked) {
       this.state = 'countdown';
       lockEl.hidden = true;
@@ -524,6 +594,7 @@ export class Game {
 
   stop() {
     this.state = 'idle';
+    this.mouseX = this.mouseY = 0;
     this.unload();
     if (document.pointerLockElement) document.exitPointerLock();
     this.exitFullscreen();
@@ -620,11 +691,12 @@ export class Game {
 
   // ------------------------------------------------------------------ weapon
   setZoom(index) {
+    this.flushLook();
     const sc = this.weapon?.scope;
     const zooms = sc?.zooms || [];
     this.zoomIndex = index > zooms.length ? 0 : index;
     this.zoom = this.zoomIndex ? zooms[this.zoomIndex - 1] : 1;
-    // VALORANT zoom divides the 103° horizontal FOV (2.5x → 41.2°, 5x → 20.6°)
+    // Approximate the scoped field of view from the displayed zoom level.
     this.camera.fov = vfovFromHfov(103 / this.zoom);
     this.camera.updateProjectionMatrix();
     const lens = this.scopeLens();
@@ -660,9 +732,10 @@ export class Game {
 
   trigger(timeStamp) {
     if (this.state !== 'running' || this.paused) return;
+    this.flushLook();
     this.audio.ensure();
     if (this.scenario.onFireInput && this.scenario.onFireInput(timeStamp)) return;
-    this.tryFire();
+    this.tryFire(0, timeStamp);
   }
 
   currentSpread() {
@@ -674,15 +747,22 @@ export class Game {
     return computeSpread(w, this.player, { scoped: this.zoom > 1, firingError: fe });
   }
 
-  tryFire() {
+  tryFire(carry = 0, inputAt) {
     const w = this.weapon;
-    if (w.noFire || this.fireCooldown > 0 || this.reloadT > 0) return;
+    if (w.noFire || this.reloadT > 0) return;
+    if (w.id === 'precision') {
+      // A rendered frame is not required between two legal taps.
+      const at = inputAt ?? performance.now();
+      if (at < this.tapReadyAt) return;
+      this.tapReadyAt = at + w.interval * 1000;
+    } else if (this.fireCooldown > 0) return;
     if (this.ammo <= 0) {
       this.startReload();
       return;
     }
     const spreadDeg = this.currentSpread();
-    this.fireCooldown = w.interval / (this.zoom > 1 ? w.scope?.fireRateMult ?? 1 : 1);
+    const interval = w.interval / (this.zoom > 1 ? w.scope?.fireRateMult ?? 1 : 1);
+    this.fireCooldown = Math.max(0, interval - carry);
     this.ammo -= 1;
     this.shotIndex = this.timeSinceShot < (w.firingError?.recover ?? 0.3) ? this.shotIndex + 1 : 1;
     this.timeSinceShot = 0;
@@ -757,7 +837,8 @@ export class Game {
   }
 
   tracer(to) {
-    const from = this.camera.localToWorld(_v1.set(0.12, -0.1, -0.4)).clone();
+    const pos = this.viewmodel?.position;
+    const from = this.camera.localToWorld(_v1.set((pos?.x ?? 0.18) - 0.06, (pos?.y ?? -0.16) + 0.06, -0.4)).clone();
     this.line(from, to, this.weapon.id === 'rifle' ? skinOf(this.skinId).tracer : '#fff2c4', 0.06);
   }
 
@@ -811,8 +892,11 @@ export class Game {
       this.vmCamera.remove(this.viewmodel);
       this.viewmodel.traverse((o) => o.material?.dispose());
     }
+    this.viewmodel = null;
     this.skinFx?.dispose();
     this.skinFx = null;
+    const id = this.weapon.id;
+    if (id === 'tracking') return;
     const g = new THREE.Group();
     const mk = (size, pos, color, emissive = '#000000') => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(...size), new THREE.MeshLambertMaterial({ color, emissive }));
@@ -820,7 +904,6 @@ export class Game {
       m.renderOrder = 900 + g.children.length;
       g.add(m);
     };
-    const id = this.weapon.id;
     if (id === 'knife') {
       mk([0.03, 0.05, 0.12], [0, 0, 0], '#1f2533');
       mk([0.012, 0.045, 0.22], [0, 0.005, -0.16], '#c9d3e6', '#2a3140');
@@ -842,6 +925,9 @@ export class Game {
     g.position.set(0.18, -0.16, -0.27);
     g.userData.base = g.position.clone();
     g.userData.kick = 0;
+    g.userData.stride = 0;
+    g.userData.bob = 0;
+    g.userData.ads = 0;
     g.visible = this.settings.showViewmodel;
     this.vmCamera.add(g);
     this.viewmodel = g;
@@ -881,7 +967,6 @@ export class Game {
     this.lastT = now;
     if (!(dt > 0)) dt = 0;
     if (dt > 0.1) dt = 0.1;
-    this.frameDt = dt;
 
     this.fpsAcc.t += dt;
     this.fpsAcc.n += 1;
@@ -892,10 +977,12 @@ export class Game {
     }
 
     const simulate = !this.paused || !!this.party;
+    const advance = simulate && this.state !== 'ready';
+    this.flushLook();
     let alpha = 1;
-    if (simulate && this.state !== 'ready') {
+    if (advance) {
       if (this.state === 'countdown') this.tickCountdown(dt);
-      this.acc = (this.acc || 0) + dt;
+      this.acc += dt;
       let steps = 0;
       while (this.acc >= TICK && steps < 40) {
         this.fixed(TICK);
@@ -904,12 +991,17 @@ export class Game {
       }
       if (steps >= 40) this.acc = 0;
       alpha = this.acc / TICK;
-      this.frame(dt);
     }
     this.lastAlpha = alpha;
+    // Aim checks and automatic shots use the same interpolated target poses as rendering.
     this.syncCamera(alpha);
-    for (const e of this.entities) e.frame?.(alpha);
-    this.skinFx?.update(this.frameDt);
+    for (const e of this.entities) e.frame?.(alpha, simulate ? dt : 0);
+    if (advance) {
+      this.frame(dt);
+      this.syncCamera(alpha);
+    }
+    if (simulate && !this.paused) this.updateViewmodel(dt);
+    this.skinFx?.update(dt);
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
     if (this.viewmodel?.visible) {
@@ -953,6 +1045,8 @@ export class Game {
     const s = this.scenario;
     if (this.state === 'running') {
       s.elapsed += dt;
+      // Carry sub-frame time into the next automatic shot to prevent cadence drift.
+      const carry = this.fireCooldown > 0 ? Math.max(0, dt - this.fireCooldown) : 0;
       this.fireCooldown = Math.max(0, this.fireCooldown - dt);
       this.timeSinceShot += dt;
       if (this.reloadT > 0) {
@@ -962,7 +1056,7 @@ export class Game {
           this.ammo = w.mag;
         }
       }
-      if (this.firing && w.auto && !this.paused) this.tryFire();
+      if (this.firing && w.auto && !this.paused) this.tryFire(carry);
       // hold-to-scope: re-scope after the bolt or a reload while the key is still held
       if (w.scope && this.modes.scope === 'hold' && this.zoomIndex === 0 && this.fireCooldown <= 0 && this.reloadT <= 0 && !this.paused && this.isHeld('scope')) this.setZoom(1);
       if (w.recoil && this.timeSinceShot > 0.1) this.recoil = Math.max(0, this.recoil - w.recoil.recover * dt);
@@ -991,14 +1085,25 @@ export class Game {
     this.camera.position.set(x, y + eye, z);
     this.camera.rotation.set(this.pitch + this.recoil * DEG, this.yaw, 0);
     this.camera.updateMatrixWorld();
+  }
+
+  updateViewmodel(dt) {
     const vm = this.viewmodel;
-    if (vm) {
-      vm.userData.kick = Math.max(0, vm.userData.kick - this.frameDt * 10);
-      const bob = p.onGround ? Math.sin(performance.now() / 110) * Math.min(1, p.hspeed() / 5.4) * 0.006 : 0;
-      vm.position.copy(vm.userData.base);
-      vm.position.z += vm.userData.kick * 0.05;
-      vm.position.y += bob;
-    }
+    if (!vm) return;
+    const p = this.player;
+    const motion = vm.userData;
+    const speed = p.onGround ? p.hspeed() : 0;
+    const blend = -Math.expm1(-16 * dt);
+    motion.kick = Math.max(0, motion.kick - dt * 10);
+    motion.stride = (motion.stride + speed * dt * Math.PI / MOVE.stepDist) % (2 * Math.PI);
+    motion.bob += (Math.min(1, speed / p.runSpeed) - motion.bob) * blend;
+    const ads = this.weapon.id === 'rifle' && this.zoom > 1 ? 1 : 0;
+    motion.ads += (ads - motion.ads) * blend;
+    const bob = motion.bob * (1 - 0.75 * motion.ads);
+    vm.position.copy(motion.base);
+    vm.position.x += Math.sin(motion.stride) * bob * 0.003 - motion.ads * 0.16;
+    vm.position.y += Math.cos(2 * motion.stride) * bob * 0.004 + motion.ads * 0.07;
+    vm.position.z += motion.kick * 0.05;
   }
 
   updateHud(dt) {

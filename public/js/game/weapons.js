@@ -59,6 +59,14 @@ export const WEAPONS = {
     noLandPenalty: true,
     crouchMult: 1,
   },
+  tracking: {
+    id: 'tracking',
+    name: 'Crosshair only',
+    noFire: true,
+    runSpeed: 5.4,
+    accurateFrac: 1,
+    mag: Infinity,
+  },
   knife: {
     id: 'knife',
     name: 'Knife',

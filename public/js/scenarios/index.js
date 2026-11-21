@@ -2,6 +2,7 @@ import { CounterStrafe, StrafeShoot, AirCourse, MoveCourse, SilentJumps } from '
 import { StrafeBots, Micro, Macro, Sniper } from './aim.js';
 import { Reaction, AngleHold } from './reaction.js';
 import { PeekDuel } from './sim.js';
+import { GridTaps, MultiTargetSwitch, StrafeTracking } from './target-practice.js';
 
 /** Scenario id (matches data/scenarios.json) → implementation. */
 export const SCENARIOS = {
@@ -10,6 +11,9 @@ export const SCENARIOS = {
   'strafe-bots': StrafeBots,
   micro: Micro,
   macro: Macro,
+  'grid-taps': GridTaps,
+  'multi-switch': MultiTargetSwitch,
+  'strafe-tracking': StrafeTracking,
   sniper: Sniper,
   reaction: Reaction,
   'angle-hold': AngleHold,

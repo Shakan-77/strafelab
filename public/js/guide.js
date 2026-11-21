@@ -3,7 +3,7 @@ export const GUIDE = [
   {
     title: 'Counter-strafing',
     drill: 'counter-strafe',
-    body: 'Valorant punishes shooting while moving with large spread. To shoot accurately you have to drop below 27.5% of your run speed. Riot\'s own measurements show releasing the key gets you there in about 0.11 s (full stop about 0.16 s), and counter-strafing is only a few milliseconds faster. Unlike CS, the skill isn\'t how hard you brake. It\'s firing the instant you\'re accurate.',
+    body: 'Valorant rifles have a movement accuracy cutoff at 27.5% of run speed. In StrafeLab, releasing the key from full rifle speed crosses that threshold in about 106 ms. Pressing the opposite key takes about 100 ms. Fire as soon as the speed bar turns green.',
     points: [
       'Releasing and counter-strafing are almost equally fast in Valorant. Pick one and time it consistently.',
       'Fire the moment the speed meter turns green. Firing earlier misses, firing later wastes the peek.',
@@ -13,7 +13,7 @@ export const GUIDE = [
   {
     title: 'Shooting while strafing (ADAD)',
     drill: 'strafe-shoot',
-    body: 'In Valorant, "shooting while strafing" means firing at the dead point between A and D, where your velocity crosses zero. You stay hard to hit and still land accurate first bullets. With Valorant\'s braking and acceleration you\'re under the accuracy threshold for only about 0.12 s per reversal with pure ADAD (a little longer if you release for a beat), so it\'s a timing skill.',
+    body: 'When you reverse from A to D or D to A, your velocity briefly crosses the rifle accuracy threshold. Watch the speed bar and fire during that window. Releasing the movement key for a beat gives you more time to aim.',
     points: [
       'Pick a rhythm first, then add the shot at the reversal.',
       'A, release, click, D is easier than pure ADAD and almost as hard to hit.',
@@ -93,14 +93,13 @@ export const GUIDE = [
 ];
 
 /**
- * [label, value, source]: 'wiki' = official VALORANT wiki / patch notes,
- * 'riot' = Riot dev measurements as reported second-hand, 'est' = estimate.
+ * [label, value, source]: 'wiki' = VALORANT wiki or Riot patch notes, 'est' = trainer estimate.
  */
 export const NUMBERS = [
-  ['Sensitivity', '0.07° per mouse count × in-game sens', 'wiki'],
-  ['Field of view', '103° horizontal at 16:9 (vertical FOV fixed on other aspect ratios)', 'wiki'],
+  ['Sensitivity', '0.07° per mouse count × in-game sens', 'est'],
+  ['Field of view', '103° horizontal at 16:9 (vertical FOV fixed on other aspect ratios)', 'est'],
   ['Zoom levels', 'Sniper 2.5x / 5x · rifle ADS 1.25x', 'wiki'],
-  ['Zoomed view & sens', 'Zoom divides the 103° FOV (41.2° / 20.6°); sensitivity × scoped multiplier ÷ zoom (from sensitivity-calculator sites, not Riot)', 'est'],
+  ['Zoomed view & sens', 'Horizontal FOV divided by zoom, with separate ADS and scoped sensitivity multipliers', 'est'],
   ['Run speed', '6.75 m/s knife · 5.40 m/s rifle · 5.13 m/s sniper', 'wiki'],
   ['Zoomed move speed', 'Rifle ADS 76% (4.10 m/s) · sniper scoped 72% (3.69 m/s)', 'wiki'],
   ['Accurate below', '27.5% of run speed for rifles (1.49 m/s), 15% for the sniper', 'wiki'],
@@ -111,10 +110,10 @@ export const NUMBERS = [
   ['Rifle damage', 'Head 160 · Body 40 · Legs 34 (150 HP target)', 'wiki'],
   ['Sniper damage', 'Head 255 · Body 150 · Legs 120 · 0.6 shots/s', 'wiki'],
   ['Walk / crouch', '56% / 45% of run speed. Both are silent.', 'est'],
-  ['Stop time', 'Release: 25% speed in ~110 ms, full stop ~160 ms · counter-strafe ~104 ms to 25%', 'riot'],
-  ['Acceleration', '~0.26 s from standstill to run speed (Unreal default); too fast to shoot after ~80 ms', 'est'],
+  ['Rifle stop time', 'From full speed to the 27.5% cutoff: ~106 ms on release, ~100 ms on reversal. Full stop on release: ~160 ms.', 'est'],
+  ['Rifle acceleration', '~0.26 s from standstill to run speed', 'est'],
   ['Enemy bots', 'React in 0.50 / 0.38 / 0.28 s (easy/medium/hard), then rifle taps vs your 150 HP; they hit you less while you move or jump', 'est'],
-  ['Air strafing', 'Velocity follows your view when strafe + mouse agree, no speed lost when turning, capped at take-off speed (bhop = run distance)', 'est'],
+  ['Air strafing', 'Run before take-off to carry momentum. Slow jumps can build up to 1.8 m/s with directional input.', 'est'],
   ['Jump', '~0.93 m apex, ~0.67 s in the air', 'est'],
   ['Crouch-jump', 'Crouching in the air lifts your feet 0.25 m (reach ~1.16 m)', 'est'],
   ['Quiet speed', 'Up to 108% of walking speed (3.27 m/s with a rifle). Faster than this, footsteps start.', 'est'],

@@ -1,5 +1,10 @@
 import { el } from '../util.js';
 
+const HIT_FLASH = [
+  { opacity: 1, transform: 'translate(-50%, -50%) rotate(45deg) scale(0.8)' },
+  { opacity: 0, transform: 'translate(-50%, -50%) rotate(45deg) scale(1.15)' },
+];
+
 /** DOM heads-up display. Writes are diffed so the DOM is only touched when text changes. */
 export class Hud {
   constructor() {
@@ -13,6 +18,7 @@ export class Hud {
     this.bannerEl = $('hud-banner');
     this.feedbackEl = $('hud-feedback');
     this.hitEl = $('hud-hitmarker');
+    this.hitAnimation = null;
     this.exposedEl = $('hud-exposed');
     this.speedEl = $('hud-speed');
     this.speedFill = $('hud-speed-fill');
@@ -34,7 +40,7 @@ export class Hud {
     this.crosshairEl = $('crosshair');
     this.boardEl = $('hud-board');
     this.cache = new Map();
-    this.timers = { banner: 0, feedback: 0, hit: 0, vignette: 0 };
+    this.timers = { banner: 0, feedback: 0, vignette: 0 };
   }
 
   set(node, text, key = node.id) {
@@ -53,6 +59,8 @@ export class Hud {
     this.partyEl.replaceChildren();
     this.bannerEl.className = '';
     this.feedbackEl.className = '';
+    this.hitAnimation?.cancel();
+    this.hitEl.className = '';
     this.exposedEl.hidden = true;
     this.vignette.className = '';
     this.scope(false);
@@ -135,10 +143,10 @@ export class Hud {
   }
 
   hitmarker(kind) {
-    this.hitEl.className = '';
-    void this.hitEl.offsetWidth; // restart animation
-    this.hitEl.className = `show ${kind}`;
-    this.timers.hit = 0.18;
+    this.hitEl.className = kind;
+    this.hitAnimation ??= this.hitEl.animate(HIT_FLASH, { duration: 180, easing: 'ease-out' });
+    this.hitAnimation.currentTime = 0;
+    this.hitAnimation.play();
   }
 
   flash(kind = 'death', dur = 0.6) {
@@ -190,7 +198,6 @@ export class Hud {
       if (this.timers[k] > 0) continue;
       if (k === 'banner') this.bannerEl.classList.remove('show');
       if (k === 'feedback') this.feedbackEl.classList.remove('show');
-      if (k === 'hit') this.hitEl.className = '';
       if (k === 'vignette') this.vignette.className = '';
     }
   }

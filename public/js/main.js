@@ -5,7 +5,7 @@ import { Net } from './net.js';
 import { AudioFX } from './audio.js';
 import { WEAPONS } from './game/weapons.js';
 import { GUIDE, NUMBERS } from './guide.js';
-import { el, fmtScore, timeAgo } from './util.js';
+import { el, fmtScore, mean, timeAgo } from './util.js';
 import {
   loadSettings, saveSettings, clientId, edpi, cmPer360, parseCrosshairCode, crosshairToCode,
   crosshairFromSettings, drawCrosshair, XH_COLOR_NAMES, DEFAULT_XH_CODE,
@@ -14,6 +14,7 @@ import {
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
 const HISTORY_KEY = 'strafelab.history.v1';
+const HISTORY_DATE = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 const DIFF_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
 
 const S = {
@@ -46,16 +47,21 @@ const fill = (node, ...kids) => node.replaceChildren(...kids.flat().filter((k) =
 // ------------------------------------------------------------------ history / PBs
 function loadHistory() {
   try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}') || {};
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}');
+    return history && typeof history === 'object' && !Array.isArray(history) ? history : {};
   } catch {
     return {};
   }
 }
 
+function historyRuns(history, key) {
+  const list = history[key];
+  return Array.isArray(list) ? list.filter((entry) => Number.isFinite(entry?.score)) : [];
+}
+
 function pushHistory(key, entry) {
   const h = loadHistory();
-  (h[key] ||= []).push(entry);
-  h[key] = h[key].slice(-60);
+  h[key] = [...historyRuns(h, key), entry].slice(-60);
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
   } catch {
@@ -65,11 +71,14 @@ function pushHistory(key, entry) {
 
 const better = (meta, a, b) => (meta.order === 'asc' ? a < b : a > b);
 
-function personalBest(meta, diff) {
-  const list = loadHistory()[`${meta.id}:${diff}`] || [];
+function bestRun(meta, list) {
   let best = null;
   for (const e of list) if (!best || better(meta, e.score, best.score)) best = e;
   return best;
+}
+
+function personalBest(meta, diff, history = loadHistory()) {
+  return bestRun(meta, historyRuns(history, `${meta.id}:${diff}`));
 }
 
 const statsObj = (stats) => Object.fromEntries((stats || []).slice(0, 16).map(([k, v]) => [k, String(v)]));
@@ -112,8 +121,9 @@ function renderChips() {
 
 function renderGrid() {
   const list = S.meta.scenarios.filter((m) => S.category === 'All' || m.category === S.category);
+  const history = loadHistory();
   $('scenario-grid').replaceChildren(...list.map((m) => {
-    const pb = personalBest(m, S.difficulty);
+    const pb = personalBest(m, S.difficulty, history);
     return el('button', {
       class: `scn${S.selected === m.id ? ' on' : ''}`,
       dataset: { cat: m.category },
@@ -155,7 +165,9 @@ function renderDetail() {
     })),
     el('div', { class: 'kv' }, el('span', {}, 'Weapon'), el('b', {}, `${w.name}${w.note ? ` · ${w.note}` : ''}`)),
     el('div', { class: 'kv' }, el('span', {}, 'Length'), el('b', {}, length)),
-    el('div', { class: 'kv' }, el('span', {}, 'Your best'), el('b', { class: pb ? 'accent' : 'muted' }, pb ? fmtScore(m, pb.score) : '-')),
+    el('div', { class: 'kv' }, el('span', {}, 'Your best'),
+      pb ? el('div', { class: 'detail-progress' }, el('b', { class: 'accent' }, fmtScore(m, pb.score)),
+        el('button', { class: 'ghost small', onclick: () => showProgress(m.id, S.difficulty) }, 'View progress')) : el('b', { class: 'muted' }, '-')),
     el('div', { class: 'actions' },
       el('button', { class: 'primary big', onclick: () => startSolo(m.id, S.difficulty) }, 'Play solo'),
       isLeader && S.party.state === 'lobby'
@@ -226,17 +238,16 @@ function renderLeaderboard() {
   renderHistory();
 }
 
-function renderHistory() {
-  const m = S.byId[S.lbScenario];
-  const list = loadHistory()[`${m.id}:${S.lbDiff}`] || [];
-  const box = $('lb-history');
-  if (list.length < 2) {
-    box.replaceChildren(el('p', { class: 'muted small' }, list.length ? `One run so far: ${fmtScore(m, list[0].score)}. Play again to see a trend.` : 'Play this drill to start tracking your progress.'));
-    return;
-  }
+function showProgress(scenario, difficulty) {
+  S.lbScenario = scenario;
+  S.lbDiff = difficulty;
+  showTab('leaderboard');
+  $('lb-history-title').focus();
+}
+
+function renderHistoryChart(m, vals, best) {
   const W = 320;
   const H = 120;
-  const vals = list.map((e) => e.score);
   let lo = Math.min(...vals);
   let hi = Math.max(...vals);
   if (hi === lo) {
@@ -249,27 +260,49 @@ function renderHistory() {
     return m.order === 'asc' ? 10 + t * (H - 20) : H - 10 - t * (H - 20);
   };
   const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const pb = personalBest(m, S.lbDiff);
-  const svg = `<svg viewBox="0 0 ${W} ${H}" class="spark" role="img" aria-label="Score history">
-    <line x1="8" x2="${W - 8}" y1="${y(pb.score)}" y2="${y(pb.score)}" class="pbline"/>
+  return `<svg viewBox="0 0 ${W} ${H}" class="spark" role="img" aria-label="Score history from oldest to newest">
+    <line x1="8" x2="${W - 8}" y1="${y(best)}" y2="${y(best)}" class="pbline"/>
     <polyline points="${pts}" class="line"/>
-    ${vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="2.6" class="${v === pb.score ? 'pb' : ''}"><title>${fmtScore(m, v)}</title></circle>`).join('')}
+    ${vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="2.6" class="${v === best ? 'pb' : ''}"><title>${fmtScore(m, v)}</title></circle>`).join('')}
   </svg>`;
-  const recent = vals.slice(-5);
-  const older = vals.slice(-10, -5);
-  const avg = (a) => a.reduce((s, v) => s + v, 0) / a.length;
-  let trend = '';
-  if (older.length) {
-    const delta = avg(recent) - avg(older);
-    const improving = m.order === 'asc' ? delta < 0 : delta > 0;
-    trend = `Last 5 runs average ${fmtScore(m, avg(recent))} (${improving ? 'improving' : 'not improving yet'} vs the 5 before).`;
+}
+
+function renderHistory() {
+  const m = S.byId[S.lbScenario];
+  const list = historyRuns(loadHistory(), `${m.id}:${S.lbDiff}`);
+  const box = $('lb-history');
+  if (!list.length) {
+    box.replaceChildren(el('p', { class: 'muted small' }, 'Finish a run on this difficulty to start tracking your progress.'));
+    return;
   }
-  box.innerHTML = svg;
-  box.append(...[
-    el('div', { class: 'kv' }, el('span', {}, 'Personal best'), el('b', { class: 'accent' }, fmtScore(m, pb.score))),
-    el('div', { class: 'kv' }, el('span', {}, 'Runs'), el('b', {}, String(list.length))),
-    trend ? el('p', { class: 'muted small' }, trend) : null,
-  ].filter(Boolean));
+
+  const best = bestRun(m, list).score;
+  const vals = list.map((entry) => entry.score);
+  const recent = vals.slice(-5);
+  box.innerHTML = vals.length > 1 ? renderHistoryChart(m, vals, best) : '';
+  box.append(
+    el('div', { class: 'kv' }, el('span', {}, 'Personal best'), el('b', { class: 'accent' }, fmtScore(m, best))),
+    el('div', { class: 'kv' }, el('span', {}, 'Runs saved'), el('b', {}, String(list.length))),
+  );
+  if (recent.length > 1) {
+    const average = fmtScore(m, mean(recent));
+    box.append(el('div', { class: 'kv' }, el('span', {}, `Last ${recent.length} average`), el('b', {}, average)));
+  }
+  if (vals.length >= 10) {
+    const average = fmtScore(m, mean(vals.slice(-10, -5)));
+    box.append(el('div', { class: 'kv' }, el('span', {}, 'Previous 5 average'), el('b', {}, average)));
+  }
+  box.append(el('h4', {}, 'Recent runs'), el('ol', { class: 'recent-runs' },
+    list.slice(-5).reverse().map((entry) => {
+      const date = new Date(entry.ts);
+      const when = Number.isFinite(entry.ts) && Number.isFinite(date.getTime())
+        ? el('time', { class: 'muted small', datetime: date.toISOString() }, HISTORY_DATE.format(date))
+        : el('span', { class: 'muted small' }, 'Date unavailable');
+      const details = Object.entries(entry.stats || {}).map(([k, v]) => `${k}: ${v}`).join(' · ');
+      return el('li', {},
+        el('div', { class: 'recent-run-top' }, when, el('b', { class: entry.score === best ? 'accent' : '' }, fmtScore(m, entry.score))),
+        details ? el('div', { class: 'muted small' }, details) : null);
+    })));
 }
 
 // ------------------------------------------------------------------ party panel
@@ -645,9 +678,10 @@ function renderSettings() {
     el('h3', {}, 'Mouse'),
     el('div', { class: 'two' }, field('Valorant sensitivity', number('sens', { step: 0.001, min: 0.001 })), field('Mouse DPI', number('dpi', { step: 50, min: 50 }))),
     el('div', { class: 'readouts' }, el('div', {}, el('span', {}, 'eDPI'), edpiOut), el('div', {}, el('span', {}, 'cm / 360°'), cmOut)),
-    field('Scoped sensitivity multiplier', number('scopedMult', { step: 0.01, min: 0.01 }), 'Same as Valorant. 1.0 scales your sens with the zoom level.'),
+    field('ADS sensitivity multiplier', number('adsMult', { step: 0.001, min: 0.001 }), 'Applies to rifle aim down sights.'),
+    field('Scoped sensitivity multiplier', number('scopedMult', { step: 0.001, min: 0.001 }), 'Applies to sniper scopes.'),
     check('rawInput', 'Raw input (ignore Windows pointer speed & acceleration)'),
-    el('p', { class: 'muted small' }, 'Uses Valorant\'s formula (0.07° per count × sens), so copying your in-game sens gives you the same cm/360. Raw input needs Chrome or Edge.'),
+    el('p', { class: 'muted small' }, 'Use your in-game sensitivity and mouse DPI. The cm / 360° readout assumes raw mouse input, available in Chrome and Edge.'),
   );
 
   // crosshair
@@ -779,8 +813,8 @@ function renderGuide() {
       el('table', { class: 'numbers' }, NUMBERS.map(([k, v, src]) => el('tr', {},
         el('th', {}, k),
         el('td', {}, v),
-        el('td', { class: `src ${src}` }, { wiki: 'Official wiki', riot: 'Riot data' }[src] || 'Estimate')))),
-      el('p', { class: 'muted small' }, '"Official wiki" values come from the VALORANT wiki and patch notes (checked Nov 2026). "Riot data" values are a Riot developer\'s published measurements, reported second-hand. "Estimate" values aren\'t published by Riot. They\'re tuned to feel like the game, so tell us if one feels off.')),
+        el('td', { class: `src ${src}` }, src === 'wiki' ? 'Wiki / patch notes' : 'Estimate')))),
+      el('p', { class: 'muted small' }, 'The estimates describe how StrafeLab simulates movement and input.')),
     el('article', { class: 'panel guide wide' },
       el('h3', {}, 'Playing with friends'),
       el('ul', {},
@@ -818,6 +852,7 @@ function backToMenu() {
   renderGrid();
   renderDetail();
   renderParty();
+  if (!$('tab-leaderboard').hidden) renderHistory();
 }
 
 function onFinish(res) {
@@ -825,7 +860,7 @@ function onFinish(res) {
   const key = `${meta.id}:${res.difficulty}`;
   const prev = personalBest(meta, res.difficulty);
   const pb = !res.dnf && (!prev || better(meta, res.score, prev.score));
-  if (!res.dnf) pushHistory(key, { score: res.score, ts: Date.now() });
+  if (!res.dnf) pushHistory(key, { score: res.score, ts: Date.now(), stats: statsObj(res.stats?.slice(0, 3)) });
   S.results = { ...res, pb, prev, rank: null };
   if (res.party) {
     net.send({ t: 'run_result', runId: res.party.runId, score: res.score, display: res.display, stats: statsObj(res.stats), dnf: !!res.dnf });
@@ -865,6 +900,10 @@ function renderResults() {
     party,
     el('div', { class: 'btns' },
       !r.party ? el('button', { class: 'primary', onclick: () => startSolo(meta.id, r.difficulty) }, 'Play again') : null,
+      !r.party && !r.dnf ? el('button', { class: 'ghost', onclick: () => {
+        backToMenu();
+        showProgress(meta.id, r.difficulty);
+      } }, 'View progress') : null,
       el('button', { class: r.party ? 'primary' : 'ghost', onclick: backToMenu }, r.party ? 'Back to lobby' : 'Menu')),
   );
 }

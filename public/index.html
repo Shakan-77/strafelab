@@ -58,7 +58,7 @@
           <div class="lb-body">
             <div class="panel"><table class="lb-table"><thead><tr><th>#</th><th>Player</th><th>Score</th><th>Details</th><th>When</th></tr></thead><tbody id="lb-rows"></tbody></table></div>
             <div class="panel history">
-              <h3>Your progress</h3>
+              <h3 id="lb-history-title" tabindex="-1">Your progress</h3>
               <div id="lb-history"></div>
             </div>
           </div>
@@ -112,13 +112,13 @@
     <div id="overlay-lock" class="overlay" hidden>
       <div class="card">
         <h2>Click to start</h2>
-        <p>Your mouse will be captured. Press <kbd>Esc</kbd> at any time to pause.</p>
+        <p id="lock-note" role="status">Your mouse will be captured. Press Esc to pause.</p>
       </div>
     </div>
     <div id="overlay-pause" class="overlay" hidden>
       <div class="card">
         <h2>Paused</h2>
-        <p class="pause-note"></p>
+        <p class="pause-note" role="status"></p>
         <div class="btns">
           <button data-act="resume" class="primary">Resume</button>
           <button data-act="restart">Restart</button>

@@ -14,10 +14,10 @@
       "minScore": 0,
       "maxScore": 60000,
       "short": "Strafe, stop, one-tap the head before the window closes.",
-      "desc": "An enemy only appears while you are strafing at full speed. Stop and tap the head before the window closes. Shots fired above the accuracy threshold are inaccurate and cost points, the same way running error ruins first shots in Valorant. Stopping follows Riot's published timings: you're accurate about 0.11 s after releasing the key, and a counter-strafe (tapping the opposite key) is only a few milliseconds faster. What this trains is shooting the moment you're accurate, not earlier and not later.",
+      "desc": "An enemy appears while you are strafing at full speed. Release the movement key or counter-strafe, then tap the head before the window closes. Shots fired above the rifle's movement accuracy threshold have more spread and cost points.",
       "tips": [
         "Watch the speed meter. Shots only count as accurate once the bar turns green, about 0.1 s after you stop pressing.",
-        "In Valorant, releasing the key is almost as fast as counter-strafing (~110 ms vs ~104 ms). Use whichever you can time consistently.",
+        "In StrafeLab, releasing the key crosses the threshold in about 106 ms, and counter-strafing takes about 100 ms.",
         "If you counter-strafe, tap the opposite key. Holding it accelerates you the other way."
       ]
     },
@@ -34,7 +34,7 @@
       "short": "Keep strafing and land shots at the dead point of each strafe.",
       "desc": "Shooting while strafing in Valorant means firing at the instant your velocity crosses zero between A and D. Keep moving: if you stand still the drill warns you and your hits score less. Hits at the peak of a strafe score full points, and lucky hits while moving score almost nothing.",
       "tips": [
-        "You're accurate for only about 0.12 s per reversal. Shoot as your strafe reverses, not mid-strafe.",
+        "The speed bar briefly turns green as your strafe reverses. Shoot during that window.",
         "A short release before reversing (A, release, shoot, D) is easier than pure ADAD.",
         "Keep the crosshair at head height the whole time so you only have to time the shot."
       ]
@@ -91,6 +91,57 @@
         "Mostly overshooting usually means tension or a sensitivity that's too high for you.",
         "Mostly undershooting means you're hesitating. Commit to the flick.",
         "One big arm movement and one small wrist correction. No more."
+      ]
+    },
+    {
+      "id": "grid-taps",
+      "name": "Grid Taps",
+      "category": "Precision",
+      "weapon": "precision",
+      "duration": 45,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 80000,
+      "short": "Tap four targets across a five-by-three grid.",
+      "desc": "Four targets stay active on a five-by-three wall grid. A hit lights an empty cell and adds 100 points. Misses cost 25 points and reset your streak.",
+      "tips": [
+        "Find the next target while finishing your current flick.",
+        "Try to keep a long streak as you increase your pace."
+      ]
+    },
+    {
+      "id": "multi-switch",
+      "name": "Multi-Target Switch",
+      "category": "Precision",
+      "weapon": "precision",
+      "duration": 45,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 80000,
+      "short": "Switch between targets at different depths before they expire.",
+      "desc": "Four lanes spawn targets at different heights and depths. Targets brighten before they expire. Each hit earns 100 points, each miss costs 25, and an expired target costs 15.",
+      "tips": [
+        "Prioritize the targets that are starting to brighten.",
+        "Lead with your eyes as you switch between near and far targets."
+      ]
+    },
+    {
+      "id": "strafe-tracking",
+      "name": "Strafe Tracking",
+      "category": "Precision",
+      "weapon": "tracking",
+      "duration": 45,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 4500,
+      "short": "Follow a strafing bot and score for time on target.",
+      "desc": "Keep your crosshair on a bot as it strafes, pauses, and crouches at higher difficulties. You earn 100 points per second on target and get a separate reading for time on the head.",
+      "tips": [
+        "Follow the bot with your crosshair. There is no shot to fire.",
+        "Start with the torso and work up to the head as your tracking steadies."
       ]
     },
     {
@@ -180,7 +231,7 @@
       "minScore": 4000,
       "maxScore": 600000,
       "short": "Time trial over gaps. Curve mid-air around walls to land.",
-      "desc": "A platform time trial with the knife out (fastest run speed). Some landings sit behind walls and can only be reached by curving mid-air. Hold the strafe key in the direction you turn your mouse and your velocity follows your view. Like Valorant, turning never costs speed and you can't gain any either: pressing A or D alone barely moves you, and bunny-hopping goes no further than running.",
+      "desc": "A platform time trial with the knife out. Run before take-off to carry speed into the jump. Some landings sit behind walls and can only be reached by curving mid-air. Hold the strafe key in the direction you turn the mouse to bend your path.",
       "tips": [
         "To curve right, hold D and sweep the mouse right smoothly. Don't hold W.",
         "Before a curve, run along the orange stripe (the inside line) and jump at the very edge.",

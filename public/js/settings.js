@@ -98,6 +98,7 @@ export const DEFAULTS = {
   name: '',
   sens: 0.4,
   dpi: 800,
+  adsMult: 1.0,
   scopedMult: 1.0,
   rawInput: true,
   crosshairCode: DEFAULT_XH_CODE,
@@ -124,6 +125,11 @@ export function loadSettings() {
     s = {};
   }
   const out = { ...DEFAULTS, ...s };
+  if (s.adsMult == null) out.adsMult = out.scopedMult; // ADS previously shared the scoped multiplier
+  for (const key of ['sens', 'dpi', 'adsMult', 'scopedMult']) {
+    const value = Number(out[key]);
+    out[key] = Number.isFinite(value) && value > 0 ? value : DEFAULTS[key];
+  }
   out.binds = normalizeBinds(s.binds);
   out.modes = { ...DEFAULT_MODES, ...(s.modes || {}) };
   // migrate the old "jump on mouse wheel" checkbox into a real bind

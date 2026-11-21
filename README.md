@@ -1,6 +1,6 @@
 # StrafeLab: Valorant aim & movement trainer
 
-A browser-based 3D trainer tuned to Valorant's mechanics: Valorant sensitivity and FOV, run/walk speeds, movement inaccuracy, counter-strafing, crouch-jumps with silent landings, and one-tap rifle damage. It has 12 drills, parties for training with friends, and a persistent leaderboard.
+A browser-based 3D trainer tuned to Valorant's mechanics: Valorant sensitivity and FOV, run/walk speeds, movement inaccuracy, counter-strafing, crouch-jumps with silent landings, and one-tap rifle damage. It has 15 drills, parties for training with friends, and a persistent leaderboard.
 
 ## Run it
 
@@ -10,7 +10,7 @@ You need Python 3.8+ and nothing else (the server uses only the standard library
 python server.py
 ```
 
-Open http://localhost:8787 in Chrome or Edge. Raw mouse input needs a Chromium browser. Three.js is loaded from a CDN, so the first load needs internet.
+Open http://localhost:8787 in desktop Chrome or Edge for raw mouse input. If an embedded browser blocks mouse capture, open the same address in the desktop browser. Three.js is loaded from a CDN, so the first load needs internet.
 
 Options: `--port 9000`, `--host 127.0.0.1` (local only). By default the server listens on all interfaces so friends on your network can join at the LAN address it prints. To play over the internet, forward the port or put the server behind a tunnel.
 
@@ -25,6 +25,9 @@ Options: `--port 9000`, `--host 127.0.0.1` (local only). By default the server l
 | Precision | Strafing Bots: Rifle Taps | Humanoid head/body/leg hitboxes that ADAD, stop and crouch with player-like acceleration. |
 | Precision | Micro Adjust | 1–6° corrections onto head-sized targets. |
 | Precision | Macro Flicks | 30–150° flicks, each classified as clean, overshoot or undershoot. |
+| Precision | Grid Taps | Rapid taps and streaks on a five-by-three grid. |
+| Precision | Multi-Target Switch | Switching between targets at different depths before they expire. |
+| Precision | Strafe Tracking | Continuous aim on an original humanoid bot, measured by time on target and on the head. |
 | Sniper | Sniper: Strafing Targets | Bolt-action, 2.5x/5x scope, vs ADAD strafers and doorway crossers. |
 | Reaction | Reaction Time | 12-trial visual reaction test. Hard adds go/no-go decoys. |
 | Reaction | Angle Hold | Hold a gap while enemies swing out and shoot back after their reaction time. |
@@ -39,12 +42,12 @@ Pick a rifle skin in **Settings > Rifle skin**, with a live 3D preview: Standard
 
 ## Valorant-matched settings
 
-- **Sensitivity:** 0.07° per mouse count × your Valorant sens, so the cm/360 is the same as in-game. The scoped sensitivity multiplier works the same way.
+- **Sensitivity:** With raw mouse input enabled, hipfire turns 0.07° per mouse count × your in-game sensitivity. Match your mouse DPI for the cm/360 readout. Set rifle ADS and sniper scoped multipliers separately in **Settings > Mouse**.
 - **FOV:** 103° horizontal at 16:9.
 - **Crosshair:** paste your Valorant crosshair profile code (Settings > Crosshair > Import). Colour, outlines, centre dot, and inner and outer lines are supported.
 - **Enemy highlight colour:** red, yellow or purple.
 
-Weapon behaviour (spread, accuracy thresholds, ADS/scope zoom and move speed, landing inaccuracy, tagging, damage, fire rates) follows the official VALORANT wiki and patch notes. Values Riot doesn't publish (walk and crouch speed, acceleration, jump height, crouch-jump lift, sound thresholds, tagging duration) are estimates. The in-app Guide marks every number as "Official wiki" or "Estimate".
+Weapon stats use the [VALORANT wiki](https://wiki.playvalorant.com/en-us/Vandal) and [Riot's patch notes](https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-3-0/). StrafeLab estimates the braking curve, acceleration, walk and crouch speeds, jump physics, and zoomed camera projection. The in-app Guide labels these estimates.
 
 ## Parties
 
