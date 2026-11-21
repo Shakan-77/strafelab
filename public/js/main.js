@@ -1,4 +1,6 @@
+import * as THREE from 'three';
 import { Game } from './game/game.js';
+import { SKINS, skinOf, buildRifle, skinSwatch } from './game/skins.js';
 import { Net } from './net.js';
 import { AudioFX } from './audio.js';
 import { WEAPONS } from './game/weapons.js';
@@ -345,6 +347,111 @@ function partyResultsTable(r, compact = false) {
       el('b', {}, row.status === 'done' ? row.display : row.status === 'playing' ? 'playing…' : 'DNF')))));
 }
 
+// ------------------------------------------------------------------ rifle skins
+let skinPreview = null;
+
+/** One small WebGL view, reused across re-renders, showing the selected skin on a turning rifle. */
+function getSkinPreview() {
+  if (skinPreview) return skinPreview;
+  const canvas = el('canvas', { class: 'skin-preview', width: 640, height: 260 });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setSize(640, 260, false);
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight('#dfe8ff', '#1b2030', 1.4));
+  const key = new THREE.DirectionalLight('#ffffff', 2.2);
+  key.position.set(2, 3, 2);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight('#9fb6ff', 1.2);
+  rim.position.set(-3, 1, -2);
+  scene.add(rim);
+  const camera = new THREE.PerspectiveCamera(26, 640 / 260, 0.01, 20);
+  camera.position.set(0, 0.14, 1.75);
+  camera.lookAt(0, -0.03, 0);
+  const pivot = new THREE.Group();
+  pivot.rotation.y = Math.PI / 2; // start side-on
+  scene.add(pivot);
+  skinPreview = { canvas, renderer, scene, camera, pivot, model: null, id: null, raf: null, last: 0 };
+  return skinPreview;
+}
+
+function showSkinPreview(id) {
+  const pv = getSkinPreview();
+  if (pv.id !== id) {
+    if (pv.model) {
+      pv.pivot.remove(pv.model.group);
+      pv.model.dispose();
+    }
+    pv.model = buildRifle(id);
+    pv.model.group.position.z = 0.365; // the rifle spans z +0.16..-0.89: centre it on the pivot
+    pv.pivot.add(pv.model.group);
+    pv.id = id;
+  }
+  if (pv.raf) return;
+  pv.last = performance.now();
+  const tick = (now) => {
+    if (!pv.canvas.isConnected || $('tab-settings').hidden) {
+      pv.raf = null;
+      return;
+    }
+    const dt = Math.min(0.05, (now - pv.last) / 1000);
+    pv.last = now;
+    pv.pivot.rotation.y += dt * 0.6;
+    pv.model.update(dt);
+    pv.renderer.render(pv.scene, pv.camera);
+    pv.raf = requestAnimationFrame(tick);
+  };
+  pv.raf = requestAnimationFrame(tick);
+}
+
+function skinsPanel(s, commit) {
+  const pv = getSkinPreview();
+  const title = el('h4', {});
+  const desc = el('p', { class: 'muted small' });
+  const grid = el('div', { class: 'skin-grid' });
+  const playSound = (id) => {
+    audio.ensure();
+    if (!audio.skinKill(id)) audio.kill(true);
+  };
+  const render = () => {
+    const skin = skinOf(s.rifleSkin);
+    title.textContent = skin.name;
+    desc.textContent = skin.desc;
+    showSkinPreview(skin.id);
+    grid.replaceChildren(...SKINS.map((sk) => {
+      const on = sk.id === skin.id;
+      return el('div', {
+        class: `skin-card${on ? ' on' : ''}`,
+        role: 'button',
+        tabindex: 0,
+        onclick: () => {
+          s.rifleSkin = sk.id;
+          commit();
+          render();
+        },
+      },
+      skinSwatch(sk.id),
+      el('b', {}, sk.name),
+      el('div', { class: 'skin-actions' },
+        el('span', { class: 'tag' + (on ? ' ready' : '') }, on ? 'EQUIPPED' : 'EQUIP'),
+        el('button', {
+          class: 'ghost small',
+          title: 'Play kill sound',
+          onclick: (e) => {
+            e.stopPropagation();
+            playSound(sk.id);
+          },
+        }, '▶ Kill sound')));
+    }));
+  };
+  render();
+  return el('div', { class: 'panel set wide skins' },
+    el('h3', {}, 'Rifle skin'),
+    el('div', { class: 'skin-top' }, el('div', { class: 'skin-stage' }, pv.canvas), el('div', {}, title, desc,
+      el('p', { class: 'muted small' }, 'Original designs. The skin shows on your rifle in every rifle drill, colours your tracers and plays its own sound on each kill.'))),
+    grid);
+}
+
 // ------------------------------------------------------------------ controls (key binds)
 let bindListener = null;
 let navBlockUntil = 0;
@@ -649,7 +756,7 @@ function renderSettings() {
     field('Render scale', select('renderScale', [['1', '100% (sharpest)'], ['0.75', '75%'], ['0.5', '50% (fastest)']]), 'Lower it if your FPS is below your monitor refresh rate.'),
   );
 
-  $('settings-body').replaceChildren(sens, gameplay, controlsPanel(s, commit, check), xhPanel, av);
+  $('settings-body').replaceChildren(sens, gameplay, skinsPanel(s, commit), controlsPanel(s, commit, check), xhPanel, av);
 }
 
 // ------------------------------------------------------------------ guide

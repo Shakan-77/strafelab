@@ -33,6 +33,10 @@ Options: `--port 9000`, `--host 127.0.0.1` (local only). By default the server l
 
 Each drill has Easy, Medium and Hard, and each difficulty has its own leaderboard.
 
+## Rifle skins
+
+Pick a rifle skin in **Settings > Rifle skin**, with a live 3D preview: Standard, **Pulse Core** (carbon weave with pulsing circuit traces), **Verdant Bloom** (stone and glowing vines), **Bastion Gilt** (ivory plating, gold trim, sapphire core) or **Wraithbound** (black steel in a flickering violet haze). Each skin animates on the first-person rifle, tints your tracers and plays its own kill sound. All of them are original: textures are generated in code and sounds are synthesized with WebAudio, so the repo contains no game assets.
+
 ## Valorant-matched settings
 
 - **Sensitivity:** 0.07° per mouse count × your Valorant sens, so the cm/360 is the same as in-game. The scoped sensitivity multiplier works the same way.

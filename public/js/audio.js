@@ -165,6 +165,86 @@ export class AudioFX {
     src.stop(t + 0.05);
   }
 
+  /** Skin kill sounds (the "first kill" sound of each original skin). Returns false if unknown. */
+  skinKill(id) {
+    const ctx = this.ensure();
+    if (!ctx || !this.hitSounds) return true;
+    const t = ctx.currentTime;
+    const env = (node, peak, attack, decay, delay = 0) => {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + delay);
+      g.gain.exponentialRampToValueAtTime(peak, t + delay + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + delay + attack + decay);
+      node.connect(g).connect(this.master);
+      return g;
+    };
+    const osc = (type, f0, f1, dur, delay = 0) => {
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t + delay);
+      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + delay + dur);
+      o.start(t + delay);
+      o.stop(t + delay + dur + 0.05);
+      return o;
+    };
+    const noise = (dur, delay = 0) => {
+      const s = ctx.createBufferSource();
+      s.buffer = this.noiseBuf;
+      s.start(t + delay, Math.random() * 0.5);
+      s.stop(t + delay + dur + 0.05);
+      return s;
+    };
+    switch (id) {
+      case 'pulse': {
+        // digital ascend: three quick square blips over a rising sweep
+        [660, 990, 1320].forEach((f, i) => env(osc('square', f, null, 0.06, i * 0.055), 0.06, 0.004, 0.07, i * 0.055));
+        env(osc('sine', 400, 2400, 0.26), 0.08, 0.01, 0.26);
+        return true;
+      }
+      case 'verdant': {
+        // bloom chime: two soft bells, a leafy rustle and a wooden knock
+        env(osc('sine', 1318.5, null, 0.8), 0.12, 0.012, 0.75);
+        env(osc('sine', 1975.5, null, 0.8, 0.07), 0.09, 0.012, 0.7, 0.07);
+        const rustle = ctx.createBiquadFilter();
+        rustle.type = 'bandpass';
+        rustle.frequency.value = 3200;
+        rustle.Q.value = 1.2;
+        noise(0.18).connect(rustle);
+        env(rustle, 0.12, 0.01, 0.16);
+        env(osc('triangle', 190, 120, 0.09), 0.18, 0.003, 0.09);
+        return true;
+      }
+      case 'gilt': {
+        // gilded bell: FM synthesis with a decaying modulation index, plus a high partial
+        const carrier = osc('sine', 880, null, 1.1);
+        const mod = osc('sine', 880 * 1.4, null, 1.1);
+        const idx = ctx.createGain();
+        idx.gain.setValueAtTime(900, t);
+        idx.gain.exponentialRampToValueAtTime(20, t + 1.0);
+        mod.connect(idx).connect(carrier.frequency);
+        env(carrier, 0.14, 0.004, 1.05);
+        env(osc('sine', 2640, null, 0.6), 0.04, 0.004, 0.55);
+        return true;
+      }
+      case 'wraith': {
+        // spectral whisper: swelling noise swept through a resonant band, over a low detuned drone
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.Q.value = 6;
+        bp.frequency.setValueAtTime(400, t);
+        bp.frequency.exponentialRampToValueAtTime(2500, t + 0.3);
+        bp.frequency.exponentialRampToValueAtTime(600, t + 0.65);
+        noise(0.7).connect(bp);
+        env(bp, 0.5, 0.25, 0.4);
+        env(osc('sawtooth', 110, 82, 0.7), 0.05, 0.12, 0.55);
+        env(osc('sawtooth', 113, 84, 0.7), 0.05, 0.12, 0.55);
+        return true;
+      }
+      default:
+        return false;
+    }
+  }
+
   /** Jump take-off: a short shoe scuff, lighter than a landing. */
   jump() {
     if (!this.footsteps) return;

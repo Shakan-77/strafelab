@@ -5,6 +5,7 @@ import { WEAPONS, computeSpread, accurateSpeed } from './weapons.js';
 import { ENEMY_COLORS } from './targets.js';
 import { Hud } from './hud.js';
 import { Ghosts } from './ghosts.js';
+import { buildRifle, skinOf } from './skins.js';
 import { RNG } from '../rng.js';
 import { SCENARIOS } from '../scenarios/index.js';
 import { clamp, DEG, el } from '../util.js';
@@ -38,6 +39,16 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(VFOV, 16 / 9, 0.03, 600);
     this.camera.rotation.order = 'YXZ';
     this.scene.add(this.camera);
+    // First-person weapon is drawn in its own pass after the world (depth cleared), so it
+    // never clips into walls but its parts still hide each other correctly.
+    this.vmScene = new THREE.Scene();
+    this.vmCamera = new THREE.PerspectiveCamera(VFOV, 16 / 9, 0.01, 10);
+    this.vmScene.add(this.vmCamera);
+    this.vmScene.add(new THREE.HemisphereLight('#c9d6ff', '#1b2030', 1.6));
+    const vmSun = new THREE.DirectionalLight('#ffffff', 1.8);
+    vmSun.position.set(0.6, 1, 0.4);
+    this.vmScene.add(vmSun);
+    this.renderer.autoClear = false;
     this.scene.add(new THREE.HemisphereLight('#c9d6ff', '#1b2030', 1.6));
     const sun = new THREE.DirectionalLight('#ffffff', 1.6);
     sun.position.set(25, 50, 15);
@@ -91,6 +102,8 @@ export class Game {
     this.drawCrosshair();
     this.resize();
     if (this.viewmodel) this.viewmodel.visible = s.showViewmodel && !this.scopeLens();
+    // changing skin mid-session swaps the rifle model straight away
+    if (this.viewmodel && this.weapon?.id === 'rifle' && this.skinId !== skinOf(s.rifleSkin).id) this.buildViewmodel();
   }
 
   drawCrosshair() {
@@ -105,6 +118,8 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(2, (window.devicePixelRatio || 1) * scale));
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
+    this.vmCamera.aspect = w / h;
+    this.vmCamera.updateProjectionMatrix();
     this.camera.updateProjectionMatrix();
     if (this.xh) this.drawCrosshair();
   }
@@ -718,7 +733,7 @@ export class Game {
       info.killed = target.damage(info.damage, zone);
       this.hud.hitmarker(info.killed ? 'kill' : zone === 'head' ? 'head' : 'body');
       this.audio.hit(zone);
-      if (info.killed) this.audio.kill(zone === 'head');
+      if (info.killed && !(w.id === 'rifle' && this.audio.skinKill(this.skinId))) this.audio.kill(zone === 'head');
     } else if (hit) {
       this.impact(hit);
     }
@@ -729,6 +744,7 @@ export class Game {
     this.tracer(info.point);
     this.audio.shot(w.id);
     if (this.viewmodel) this.viewmodel.userData.kick = 1;
+    this.skinFx?.onShot();
 
     if (this.scenario.feedback === 'movement' && this.settings.showFeedback) {
       if (!p.onGround) this.hud.feedback('IN AIR: inaccurate', 'bad');
@@ -742,7 +758,7 @@ export class Game {
 
   tracer(to) {
     const from = this.camera.localToWorld(_v1.set(0.12, -0.1, -0.4)).clone();
-    this.line(from, to, '#fff2c4', 0.06);
+    this.line(from, to, this.weapon.id === 'rifle' ? skinOf(this.skinId).tracer : '#fff2c4', 0.06);
   }
 
   /** Enemy shot tracer from a bot toward the player. */
@@ -792,12 +808,14 @@ export class Game {
 
   buildViewmodel() {
     if (this.viewmodel) {
-      this.camera.remove(this.viewmodel);
+      this.vmCamera.remove(this.viewmodel);
       this.viewmodel.traverse((o) => o.material?.dispose());
     }
+    this.skinFx?.dispose();
+    this.skinFx = null;
     const g = new THREE.Group();
     const mk = (size, pos, color, emissive = '#000000') => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(...size), new THREE.MeshLambertMaterial({ color, emissive, depthTest: false }));
+      const m = new THREE.Mesh(new THREE.BoxGeometry(...size), new THREE.MeshLambertMaterial({ color, emissive }));
       m.position.set(...pos);
       m.renderOrder = 900 + g.children.length;
       g.add(m);
@@ -814,17 +832,18 @@ export class Game {
       mk([0.05, 0.07, 0.3], [0, 0, -0.15], '#232a39');
       mk([0.052, 0.012, 0.2], [0, 0.04, -0.15], '#2de2c2', '#0d5f53');
     } else {
-      mk([0.06, 0.09, 0.5], [0, 0, -0.25], '#232a39');
-      mk([0.025, 0.025, 0.3], [0, 0.015, -0.62], '#151a24');
-      mk([0.045, 0.13, 0.08], [0, -0.1, -0.24], '#1b202c');
-      mk([0.062, 0.014, 0.3], [0, 0.05, -0.25], '#2de2c2', '#0d5f53');
+      // rifle: skinned model (see skins.js)
+      const rifle = buildRifle(this.settings.rifleSkin);
+      g.add(rifle.group);
+      this.skinFx = rifle;
+      this.skinId = rifle.skin.id;
     }
-    g.scale.setScalar(0.55);
-    g.position.set(0.17, -0.15, -0.3);
+    g.scale.setScalar(0.5);
+    g.position.set(0.18, -0.16, -0.27);
     g.userData.base = g.position.clone();
     g.userData.kick = 0;
     g.visible = this.settings.showViewmodel;
-    this.camera.add(g);
+    this.vmCamera.add(g);
     this.viewmodel = g;
   }
 
@@ -890,7 +909,13 @@ export class Game {
     this.lastAlpha = alpha;
     this.syncCamera(alpha);
     for (const e of this.entities) e.frame?.(alpha);
+    this.skinFx?.update(this.frameDt);
+    this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
+    if (this.viewmodel?.visible) {
+      this.renderer.clearDepth();
+      this.renderer.render(this.vmScene, this.vmCamera);
+    }
     if (this.audio.ctx) {
       this.camera.getWorldDirection(_v1);
       _v2.set(0, 1, 0).applyQuaternion(this.camera.quaternion);

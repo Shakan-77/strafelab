@@ -105,6 +105,7 @@ export const DEFAULTS = {
   binds: DEFAULT_BINDS,
   modes: DEFAULT_MODES,
   fullscreenPlay: true,
+  rifleSkin: 'standard',
   showSpeed: true,
   showFeedback: true,
   showFps: true,
