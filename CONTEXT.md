@@ -1,6 +1,6 @@
 # StrafeLab context
 
-StrafeLab is a browser-based 3D aim and movement trainer for Valorant practice. The current use is local development and playtesting on Windows. The repository is [Shakan-77/strafelab](https://github.com/Shakan-77/strafelab). [Changes since `100862e`](#changes-since-100862e) records Shakan-77's gameplay changes through [`976789f`](https://github.com/Shakan-77/strafelab/commit/976789f).
+StrafeLab is a browser-based 3D aim and movement trainer for Valorant practice. The current use is local development and playtesting on Windows. The repository is [Shakan-77/strafelab](https://github.com/Shakan-77/strafelab). [Changes since `100862e`](#changes-since-100862e) records Shakan-77's gameplay changes through [`f641ec6`](https://github.com/Shakan-77/strafelab/commit/f641ec6). Every push should add its changes to that section.
 
 ## Run locally
 
@@ -41,7 +41,7 @@ The regular URL uses real browser mouse capture. Add `?debug=1` to bypass captur
 
 ## Changes since `100862e`
 
-Shakan-77 made three commits. All of them follow the user's feedback from playing Valorant. Riot doesn't publish air-movement numbers, and the patch notes have nothing on air control or jump physics, so the air values below are calibrated to the user's descriptions of in-game behaviour.
+These commits follow the user's feedback from playing Valorant. Riot doesn't publish air-movement numbers, and the patch notes have nothing on air control or jump physics, so the air values below are calibrated to the user's descriptions of in-game behaviour.
 
 ### `e27e658`: tougher bots, crouch-release landing, weapon picker
 
@@ -66,8 +66,25 @@ Shakan-77 made three commits. All of them follow the user's feedback from playin
 - **Camera steering:** while W, A or D is held in the air, the velocity rotates by the same amount as the camera's yaw change. The rotation is capped at `airFollow` = 240°/s, and speed is unchanged. With no key held, the mouse doesn't steer. The yaw from the previous tick is stored in `player.airYaw`.
 - **Key-only drift:** keys alone nudge the path toward the input direction at `accel × airControl / speed`. With `airControl` = 0.0645 this is about 1.34 m/s² sideways. As a result, a full-speed W jump with D held drifts about 0.31 m over a 3.61 m jump. The user's Valorant reference is 1/12 of the jump.
 - **No strafe push on running jumps:** the Source-style strafe acceleration now only runs while a jump started from rest is still building speed (up to `airStartCap` = 1.8 m/s). Before this change, D plus a mouse sweep overshot the camera by about 50°.
-- **When the reversal brake applies:** it now needs W or S held (`fx !== 0`). It triggers when the input opposes the current path, or when the input points back toward the take-off direction while speed is still below take-off speed. A smooth 180° mouse turn now steers, while a flick or pressing S still brakes. Before this change, the brake compared the input with the take-off direction and stopped smooth turns at about 135°.
+- **When the reversal brake applies:** in this commit it needed W or S held (`fx !== 0`); `f641ec6` removed that restriction. It triggers when the input opposes the current path, or when the input points back toward the take-off direction while speed is still below take-off speed. A smooth 180° mouse turn now steers, while a flick or pressing S still brakes. Before this change, the brake compared the input with the take-off direction and stopped smooth turns at about 135°.
 - **Silent ledge landing:** with Walk or Crouch held at landing, a landing that ends higher than the take-off is silent at any speed (`ledgeLand` on the land event). "Higher" means landing at least 0.02 m above `player.takeoffY`, which is the same as falling less than you rose. Flat-ground Walk jumps are still loud, unless the crouch-release rule above applies.
+
+### `f641ec6`: A/D brakes mid-air (jump peek pull-back)
+
+- **Change:** in `player.js` the air reversal brake (`airReverse` = 19 m/s²) no longer requires W or S. Any held key whose direction points against your current path brakes you and pushes you back. Example: you jump while moving right and press A. As before, it also keeps pushing back the way you came until you're back up to take-off speed.
+- **Why:** the user supplied a Radiant movement guide video ("How to Get INSANE MOVEMENT in Valorant"). Its on-screen key overlay was read frame by frame. In the jump-peek clip (about 794.3 to 795.2 s) the player holds W+D toward a corner and releases D. He keeps drifting right with only W, presses A at about 794.8 s, and is back behind cover about 0.3 s later. The jump key isn't shown on the overlay (it is probably bound to the mouse wheel), so take-off couldn't be timed. The braking strength is therefore an inference that reuses the existing `airReverse` value.
+- **Unchanged:** the brake compares input with the current path, so holding D (or W) while sweeping the mouse still steers. Smooth turns are never braked.
+- **Simulated results (rifle, full-speed run to the right, then jump):**
+
+  | Keys after take-off | Landing point |
+  | --- | --- |
+  | D held, or no keys | 3.63 m right of take-off |
+  | A at take-off | 0.6 m on the other side of take-off |
+  | A from 0.3 s | 2.26 m right, already moving back at 1.7 m/s |
+
+  All the earlier checks in the verification table below still give the same results.
+- **Guide:** the air-strafing text now describes pulling a jump peek back with the opposite strafe key.
+- **Other findings from the same video, not yet applied:** dead-zoning clips in the Range showed 0.00° movement error on rifle shots fired 83 ms after pressing the opposite key from full speed. StrafeLab needs about 102 ms to reach the accuracy cutoff in the same situation. Shortening StrafeLab's counter-strafe to about 80 ms was proposed, and the user hasn't decided yet.
 
 ### Sound rules in force (`player.js`)
 
@@ -86,6 +103,7 @@ Open `http://localhost:8787/?debug=1` and run a script in the console. Import `P
 | W+D, or D alone, from a full-speed jump | 0.31 m sideways over 3.61 m |
 | W or D with a 90° mouse turn | The path ends up at about 90° to 98° |
 | W with a 180° flick, or S | Lands 0.6 m behind take-off |
+| Running right, jump, A at take-off | Lands 0.6 m past take-off on the other side |
 | Walk jump onto a 0.5 m ledge | Silent |
 | Crouch-jump onto a 0.8 m ledge | Silent |
 | Walk jump on flat ground | Loud |
@@ -99,6 +117,6 @@ Chrome automation verified mouse look while strafing and jumping in fullscreen, 
 After integrating the collaborator's commits, Chrome automation checked native capture and resume, 64 scripted Grid Taps hits, two-hit transfer scoring, last-run comparisons, and the selected weapon on restart. The physics checks covered steering at 30, 60 and 144 FPS, a reachable trajectory through each Air Strafe Course bend on every difficulty, mid-air reversal, tagging, and quiet landings.
 
 - **Mouse sticking:** the user reported intermittent mouse sticking during rapid Grid Taps flicks and clicks, and earlier while strafing or airborne in Counter-Strafe. The exact freeze did not reproduce in automation. A physical-mouse playtest on the affected setup is still pending. If it recurs, pause and open **Input details** to check delivered mouse events and the longest recent frame.
-- **Air movement feel:** the air values are still estimates. The user has been tuning them against Valorant one behaviour at a time. Hand-playtesting of `976789f` is pending.
+- **Air movement feel:** the air values are still estimates. The user has been tuning them against Valorant one behaviour at a time. Hand-playtesting of `976789f` and `f641ec6` is pending.
 
 For browser input and hit-testing references, see the [MIT-licensed AimForge input code](https://github.com/Shiraikuroko123/aimforge/blob/main/js/game.js), [VANTA](https://github.com/aimtrainer-code/aim-trainer), and [Three.js PointerLockControls](https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/PointerLockControls.js).
