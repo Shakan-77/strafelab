@@ -39,8 +39,9 @@ export const MOVE = {
   jumpVel: 5.55,
   airAccel: 5,
   // Unreal-style air control: mid-air acceleration toward your keys = ground accel × airControl.
-  // Riot doesn't publish Valorant's value; 0.2 (≈4.2 m/s², ~44°/s turn at 5.4 m/s) is an estimate.
-  airControl: 0.2,
+  // Riot doesn't publish Valorant's value. 0.0645 (≈1.34 m/s² sideways, ~14°/s turn at 5.4 m/s)
+  // makes a full-speed W jump with D held drift ~0.3 m right: about 1/12 of the 3.6 m jump.
+  airControl: 0.0645,
   airFollow: (240 * Math.PI) / 180, // rad/s your path can follow the camera with W held (estimate)
   airCap: 0.7, // steering projection cap for running jumps
   airStartCap: 1.8, // estimated speed available when jumping from rest
@@ -272,6 +273,8 @@ export class Player {
       this.uncrouchedMidAir = false;
       this.takeoffSpeed = Math.hypot(vx, vz);
       this.recordTakeoffDir(vx, vz);
+      this.takeoffY = this.pos.y;
+      this.airYaw = yaw;
       this.onEvent('jump', {
         speed: this.takeoffSpeed,
         crouched: this.crouched,
@@ -329,7 +332,10 @@ export class Player {
       const facing = -Math.sin(yaw) * ux - Math.cos(yaw) * uz;
       const opposing = ux * wx + uz * wz < -0.9 && Math.abs(facing) > 0.5;
       // input pointing back the way you jumped from (S, or W after turning around)
-      const reversing = this.takeoffSpeed > MOVE.airCap && this.takeoffDirX * wx + this.takeoffDirZ * wz < -0.7;
+      // (against your current path, so a smooth mouse turn just steers; a flick or S brakes)
+      // and it keeps pushing back the way you came until you're back up to take-off speed
+      const backToTakeoff = this.takeoffDirX * wx + this.takeoffDirZ * wz < -0.7 && sp0 < this.takeoffSpeed - 0.05;
+      const reversing = fx !== 0 && this.takeoffSpeed > MOVE.airCap && (ux * wx + uz * wz < -0.7 || backToTakeoff);
       if (opposing || reversing) {
         // Valorant: a full-speed jump with a 180° turn lands ~0.5 m behind the take-off point, so
         // opposite input brakes and then pushes you back hard (calibrated to that measurement)
@@ -340,7 +346,8 @@ export class Player {
         const cur = vx * wx + vz * wz;
         const drive = buildingSpeed ? startingSpeed : Math.min(wishSpeed, MOVE.airCap);
         const add = drive - cur;
-        if (add > 0) {
+        // running jumps steer by camera (below), so only slow jumps build speed from keys here
+        if (add > 0 && buildingSpeed) {
           const acc = Math.min(MOVE.airAccel * wishSpeed * dt, add);
           vx += acc * wx;
           vz += acc * wz;
@@ -356,17 +363,25 @@ export class Player {
         // (A/D alone, or W while turning the mouse), at a limited rate and without changing speed.
         const sp2 = Math.hypot(vx, vz);
         if (sp2 > 0.3) {
-          const cur = Math.atan2(vz, vx);
+          let cur = Math.atan2(vz, vx);
+          // With any movement key held your path turns with the camera as you move the mouse (up to
+          // airFollow), so the camera does the steering. Velocity angle = -90° - yaw, so a yaw
+          // change of d turns the path by -d.
+          if (this.airYaw !== undefined) {
+            let dYaw = yaw - this.airYaw;
+            dYaw -= Math.round(dYaw / (Math.PI * 2)) * Math.PI * 2;
+            const lim = MOVE.airFollow * dt;
+            cur -= Math.max(-lim, Math.min(lim, dYaw));
+          }
+          // Keys alone (A/D, or W+D without moving the mouse) only nudge the path via air control:
+          // a full-speed W jump with D held drifts ~1/12 of the jump length sideways.
           const want = Math.atan2(wz, wx);
           let diff = want - cur;
           diff -= Math.round(diff / (Math.PI * 2)) * Math.PI * 2;
-          // With a forward key held your path follows the camera (mouse steering); A/D alone only
-          // nudges it via air control. Both keep your speed.
           const keyRate = (MOVE.accel * MOVE.airControl) / sp2; // rad/s: slower when moving faster
-          const turnRate = fx > 0 ? Math.max(keyRate, MOVE.airFollow) : keyRate;
-          const step = Math.sign(diff) * Math.min(Math.abs(diff), turnRate * dt);
-          vx = Math.cos(cur + step) * sp2;
-          vz = Math.sin(cur + step) * sp2;
+          cur += Math.sign(diff) * Math.min(Math.abs(diff), keyRate * dt);
+          vx = Math.cos(cur) * sp2;
+          vz = Math.sin(cur) * sp2;
         }
       }
       const cap = Math.max(this.takeoffSpeed, startingSpeed);
@@ -379,6 +394,7 @@ export class Player {
     this.vel.x = vx;
     this.vel.z = vz;
     this.vel.y -= MOVE.gravity * dt;
+    if (!this.onGround) this.airYaw = yaw;
 
     const wasGround = this.onGround;
     const fallSpeed = this.vel.y;
@@ -388,6 +404,8 @@ export class Player {
     if (wasGround && !this.onGround) {
       this.takeoffSpeed = this.hspeed();
       this.recordTakeoffDir(this.vel.x, this.vel.z);
+      this.takeoffY = this.prev.y; // walked off a ledge
+      this.airYaw = yaw;
     }
     if (!wasGround && this.onGround) {
       const vy = Math.max(0, -fallSpeed);
@@ -396,6 +414,9 @@ export class Player {
       // Valorant silent jump: crouch-jump, release crouch mid-air, land at walking speed = no sound
       const crouchRelease = !!this.uncrouchedMidAir && hBefore <= this.quietSpeed;
       this.uncrouchedMidAir = false;
+      // Valorant: holding Walk or Crouch, a landing that ends higher than where you jumped from
+      // (you fell less than you rose) is silent, at any speed
+      const ledgeLand = (!!inp.walk || this.crouched) && this.takeoffY !== undefined && this.pos.y > this.takeoffY + 0.02;
       // VALORANT: every gun is +7° inaccurate for 0.225 s after landing (ignore tiny step-offs)
       if (this.airTime > 0.1) this.landPenalty = 0.225;
       this.onEvent('land', {
@@ -406,7 +427,8 @@ export class Player {
         tucked: wasTucked,
         crouched: this.crouched,
         crouchRelease,
-        loud: !crouchRelease && this.isLoudLanding(vy, hBefore),
+        ledgeLand,
+        loud: !crouchRelease && !ledgeLand && this.isLoudLanding(vy, hBefore),
       });
       this.airTime = 0;
     }

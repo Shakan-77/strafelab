@@ -23,10 +23,10 @@ export const GUIDE = [
   {
     title: 'Air strafing',
     drill: 'air-course',
-    body: 'In the air, holding W makes your path follow the camera as you turn (up to about 240°/s, keeping your speed), while A or D alone only nudges it (about 44°/s at rifle speed), as in Valorant\'s Unreal-based movement. Holding the strafe key in the same direction you sweep your mouse bends it faster still, so you can curve around corners and onto ledges. Unlike CS, turning never costs speed, and like Valorant you can\'t gain any: air speed is capped at your take-off speed, so bunny-hopping travels exactly as far as running. Reversing mid-air (S, or W after turning around) brakes you hard: a full-speed jump with an immediate 180° lands about 0.5 m behind where you jumped, as in Valorant.',
+    body: 'In the air, the camera steers. While you hold any movement key (W, A or D), your path turns with the camera as you move the mouse (up to about 240°/s, keeping your speed), so you can curve around corners and onto ledges. With no key held, the mouse doesn\'t steer at all. Keys on their own barely steer: a full-speed jump holding W and D drifts only about 0.3 m right, roughly 1/12 of the jump, as in Valorant. Unlike CS, turning never costs speed, and like Valorant you can\'t gain any: air speed is capped at your take-off speed, so bunny-hopping travels exactly as far as running. Reversing mid-air (S, or W after turning around) brakes you hard: a full-speed jump with an immediate 180° lands about 0.5 m behind where you jumped, as in Valorant.',
     points: [
-      'Curve right: release W, hold D, sweep the mouse right smoothly.',
-      'Your path can only bend so fast (about 280°/s), so start turning early rather than flicking.',
+      'Curve right: hold W (or D), sweep the mouse right smoothly. Your path ends up where you look.',
+      'Your path can only bend so fast (about 240°/s), so start turning early. A sudden 180° flick with W brakes you instead of turning.',
       'You are always inaccurate in the air (+10° rifle spread) and for 0.225 s after landing (+7°).',
     ],
   },
@@ -73,11 +73,11 @@ export const GUIDE = [
   {
     title: 'Silent jumps',
     drill: 'silent-jump',
-    body: 'A jump can be heard twice: at take-off and on landing. The take-off is silent whenever you hold Walk or Crouch as you press jump, even straight out of a run. With neither, it\'s heard, even from a standstill. A landing is silent when you barely fall at the end of your jump and you\'re still at walking speed. Crouching while you jump pulls your legs up, so you clear a ledge that a normal jump can\'t reach and land close to the top of your jump, a short and silent fall. Releasing crouch mid-air after a crouch-jump also lands silently at walking speed, even on flat ground.',
+    body: 'A jump can be heard twice: at take-off and on landing. The take-off is silent whenever you hold Walk or Crouch as you press jump, even straight out of a run. With neither, it\'s heard, even from a standstill. A landing is silent when you hold Walk or Crouch and land higher than you jumped from (you fall less than you rose), or when you barely fall at the end of your jump at walking speed. Crouching while you jump pulls your legs up, so you clear a ledge that a normal jump can\'t reach and land close to the top of your jump, a short and silent fall. Releasing crouch mid-air after a crouch-jump also lands silently at walking speed, even on flat ground.',
     points: [
       'Hold Walk, then jump and crouch together, and you get onto the ledge without a sound. A crouch-jump is silent at take-off even without Walk.',
       'Bind Walk and Jump to the same key if pressing both together is awkward.',
-      'A silent take-off doesn\'t save a loud landing: running speed or a long drop makes any landing loud. Take small steps down, never the full drop.',
+      'A silent take-off doesn\'t save a loud landing on flat ground or a drop. Landing back at or below your take-off height is heard. Take small steps down, never the full drop.',
     ],
   },
   {
@@ -118,6 +118,7 @@ export const NUMBERS = [
   ['Crouch-jump', 'Crouching in the air lifts your feet 0.25 m (reach ~1.16 m)', 'est'],
   ['Quiet speed', 'Up to 108% of walking speed (3.27 m/s with a rifle). Faster than this, footsteps start.', 'est'],
   ['Silent jump', 'Walk or Crouch held at take-off, at any speed. Otherwise the jump is heard.', 'est'],
-  ['Silent landing', 'Fall of ~0.3 m or less (impact under 3.2 m/s) at quiet speed or slower', 'est'],
+  ['Silent landing', 'Walk or Crouch held and landing higher than take-off (any speed), or a fall of ~0.3 m or less (impact under 3.2 m/s) at quiet speed', 'est'],
+  ['Air drift', 'Full-speed jump holding W+D drifts ~0.3 m sideways (~1/12 of the jump)', 'est'],
   ['Tick rate', 'Physics simulated at 128 Hz', 'wiki'],
 ];
