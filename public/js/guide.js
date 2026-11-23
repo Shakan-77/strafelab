@@ -23,10 +23,10 @@ export const GUIDE = [
   {
     title: 'Air strafing',
     drill: 'air-course',
-    body: 'A running jump carries your take-off momentum. With a movement key held, your path can follow your camera at up to about 240°/s. Release the movement keys to look around while travelling along the same line. In StrafeLab, holding W and D with a steady camera drifts about 0.3 m right on a full-speed jump. A sharp reversal can brake the jump and carry you back toward take-off. The steering strength and jump arc are estimates.',
+    body: 'A running jump carries your take-off momentum. With a movement key held, your path can follow your camera at up to about 240°/s. Release the movement keys to look around while travelling along the same line. In StrafeLab, holding W and D with a steady camera drifts about 0.3 m right on a full-speed jump. Pressing the key opposite to your motion (S on a forward jump, or A while flying right) brakes the jump and carries you back toward take-off, which is how a jump peek snaps back to cover. The steering strength and jump arc are estimates.',
     points: [
       'Curve right: hold W (or D), sweep the mouse right smoothly. Your path ends up where you look.',
-      'Your path can only bend so fast (about 240°/s), so start turning early. A sudden 180° flick with W brakes you instead of turning.',
+      'Your path can only bend so fast (about 240°/s), so start turning early. A sudden 180° flick with W brakes you instead of turning. Jump peek: jump out with D, then press A mid-air to come straight back.',
       'You are always inaccurate in the air (+10° rifle spread) and for 0.225 s after landing (+7°).',
     ],
   },

@@ -345,11 +345,12 @@ export class Player {
       // the way you face (e.g. S while flying forward); over-turning the mouse is not braking
       const facing = -Math.sin(yaw) * ux - Math.cos(yaw) * uz;
       const opposing = ux * wx + uz * wz < -0.9 && Math.abs(facing) > 0.5;
-      // input pointing back the way you jumped from (S, or W after turning around)
-      // (against your current path, so a smooth mouse turn just steers; a flick or S brakes)
-      // and it keeps pushing back the way you came until you're back up to take-off speed
+      // input pointing back the way you're flying (S, W after a flick, or A/D against a sideways
+      // jump, as in a jump peek pulled back with the opposite strafe key). Checked against your
+      // current path, so a smooth mouse turn with a key held just steers. It keeps pushing back the
+      // way you came until you're back up to take-off speed.
       const backToTakeoff = this.takeoffDirX * wx + this.takeoffDirZ * wz < -0.7 && sp0 < this.takeoffSpeed - 0.05;
-      const reversing = fx !== 0 && this.takeoffSpeed > MOVE.minReverseSpeed && (ux * wx + uz * wz < -0.7 || backToTakeoff);
+      const reversing = this.takeoffSpeed > MOVE.minReverseSpeed && (ux * wx + uz * wz < -0.7 || backToTakeoff);
       if (opposing || reversing) {
         // Valorant: a full-speed jump with a 180° turn lands ~0.5 m behind the take-off point, so
         // opposite input brakes and then pushes you back hard (calibrated to that measurement)
