@@ -44,6 +44,7 @@ export class BotGun {
     const chance = state === 'air' ? sk.hitAir : state === 'moving' ? sk.hitMoving : sk.hitStill;
     this.game.enemyTracer(from);
     if (!this.rng.chance(chance)) return { hit: false, state };
+    this.game.player.tag(); // you get tagged (slowed) when hit, like Valorant
     const zone = this.rng.chance(sk.head) ? 'head' : 'body';
     return { hit: true, zone, damage: DMG[zone], state };
   }

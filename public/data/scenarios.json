@@ -231,9 +231,9 @@
       "minScore": 4000,
       "maxScore": 600000,
       "short": "Time trial over gaps. Curve mid-air around walls to land.",
-      "desc": "A platform time trial with the knife out. Run before take-off to carry speed into the jump. Some landings sit behind walls and can only be reached by curving mid-air. Like Valorant, your path swings toward the keys you hold in the air; sweeping the mouse the same way bends it faster. Hard needs both.",
+      "desc": "A platform time trial with the knife out. Run before take-off to carry speed into the jump. Some landings sit behind walls and can only be reached by curving mid-air. In the air your path follows the camera while you hold W, and strafe + mouse together curve it hardest; A or D alone only nudges it. Hard needs a proper strafe + mouse curve.",
       "tips": [
-        "To curve right, hold D once you've cleared the wall. Sweep the mouse right at the same time for a tighter curve.",
+        "To curve right once you've cleared the wall, hold W and turn the camera right, or for a tighter curve hold D and sweep the mouse right.",
         "Before a curve, run along the orange stripe (the inside line) and jump at the very edge.",
         "Turning fast doesn't cost speed, but your path can only bend so quickly, so start the turn as soon as you clear the wall.",
         "Falling sends you back to the last checkpoint with a +2s penalty."

@@ -12,7 +12,8 @@ import { clamp } from '../util.js';
  * - air strafing: holding the strafe key toward your mouse turn bends your path to follow your
  *   view (like CS), but turning never costs speed (unlike CS), and you can't gain speed: air
  *   running jumps keep their take-off speed. Slow jumps have limited control up to 1.8 m/s.
- *   Pressing against your motion mid-air only bleeds speed slowly.
+ *   Reversing mid-air (S, or W after turning around) pushes you back hard: a full-speed jump with
+ *   an immediate 180° lands ~0.5 m behind the take-off point, as in Valorant.
  * - crouch-jump: crouching in the air (or jumping while crouched) tucks your legs up, so your
  *   feet clear ledges a normal jump can't (~1.18 m instead of ~0.93 m)
  * - one "quiet speed" (just above walking speed): faster than it, footsteps start
@@ -22,6 +23,8 @@ import { clamp } from '../util.js';
  *   clear, at walking speed, lands silently, even if you uncrouch before touching down.
  */
 export const MOVE = {
+  tagSlow: 0.725, // patch 3.0
+  tagTime: 0.5, // estimate
   tuckLift: 0.25,
   silentLandVy: 3.2,
   quietMult: 1.08, // × walk speed: above this, footsteps / jumps / landings are heard
@@ -29,11 +32,16 @@ export const MOVE = {
   brakeFriction: 3.77, // 1/s  } fitted so 5.4 m/s → 25% in ~110 ms, full stop in ~160 ms
   brakeDecel: 24.5, // m/s² }
   counterExtra: 2.2, // estimated extra m/s² while pressing the opposite key
-  airBrake: 3, // m/s² when pressing against your motion mid-air (estimate: slight, no air-stop)
+  // m/s² mid-air toward input pointing back the way you jumped: calibrated so a full-speed jump
+  // with an immediate 180° reversal lands ~0.5 m behind the take-off point, as in Valorant
+  airReverse: 19,
   gravity: 16.5,
   jumpVel: 5.55,
   airAccel: 5,
-  airTurn: (120 * Math.PI) / 180, // rad/s your path swings toward your keys mid-air (estimate)
+  // Unreal-style air control: mid-air acceleration toward your keys = ground accel × airControl.
+  // Riot doesn't publish Valorant's value; 0.2 (≈4.2 m/s², ~44°/s turn at 5.4 m/s) is an estimate.
+  airControl: 0.2,
+  airFollow: (240 * Math.PI) / 180, // rad/s your path can follow the camera with W held (estimate)
   airCap: 0.7, // steering projection cap for running jumps
   airStartCap: 1.8, // estimated speed available when jumping from rest
   walkMult: 0.56,
@@ -162,6 +170,31 @@ export class Player {
     return true;
   }
 
+  recordTakeoffDir(vx, vz) {
+    const l = Math.hypot(vx, vz);
+    this.takeoffDirX = l > 1e-3 ? vx / l : 0;
+    this.takeoffDirZ = l > 1e-3 ? vz / l : 0;
+  }
+
+  /**
+   * Tagging (patch 3.0): getting shot slows you 72.5%, which drops a running rifle user to 27.5%
+   * of run speed, exactly the accuracy deadzone (patch 9.10 explains this intent). Riot doesn't
+   * publish how long it lasts; 0.5 s easing back is an estimate.
+   */
+  tag() {
+    this.tagT = MOVE.tagTime;
+    const cap = this.runSpeed * (1 - MOVE.tagSlow);
+    const h = this.hspeed();
+    if (h > cap) {
+      this.vel.x *= cap / h;
+      this.vel.z *= cap / h;
+    }
+  }
+
+  tagMult() {
+    return this.tagT > 0 ? 1 - MOVE.tagSlow * (this.tagT / MOVE.tagTime) : 1;
+  }
+
   hspeed() {
     return Math.hypot(this.vel.x, this.vel.z);
   }
@@ -221,7 +254,7 @@ export class Player {
     if (wl > 0) {
       wx /= wl;
       wz /= wl;
-      wishSpeed = this.runSpeed * this.speedMult * (this.crouched ? MOVE.crouchMult : inp.walk ? MOVE.walkMult : 1);
+      wishSpeed = this.runSpeed * this.speedMult * this.tagMult() * (this.crouched ? MOVE.crouchMult : inp.walk ? MOVE.walkMult : 1);
     }
 
     const speedBefore = this.hspeed();
@@ -231,12 +264,14 @@ export class Player {
 
     if (this.jumpBuffer > 0) this.jumpBuffer -= dt;
     if (this.landPenalty > 0) this.landPenalty -= dt;
+    if (this.tagT > 0) this.tagT -= dt;
     if (this.onGround && this.jumpBuffer > 0 && !locked && this.allowJump) {
       this.vel.y = MOVE.jumpVel;
       this.onGround = false;
       this.jumpBuffer = 0;
       this.uncrouchedMidAir = false;
       this.takeoffSpeed = Math.hypot(vx, vz);
+      this.recordTakeoffDir(vx, vz);
       this.onEvent('jump', {
         speed: this.takeoffSpeed,
         crouched: this.crouched,
@@ -293,11 +328,13 @@ export class Player {
       // the way you face (e.g. S while flying forward); over-turning the mouse is not braking
       const facing = -Math.sin(yaw) * ux - Math.cos(yaw) * uz;
       const opposing = ux * wx + uz * wz < -0.9 && Math.abs(facing) > 0.5;
-      if (sp0 > MOVE.airCap && opposing) {
-        // pressing against your motion mid-air slowly bleeds speed (no instant air-stop)
-        const ns = Math.max(0, sp0 - MOVE.airBrake * dt);
-        vx = ux * ns;
-        vz = uz * ns;
+      // input pointing back the way you jumped from (S, or W after turning around)
+      const reversing = this.takeoffSpeed > MOVE.airCap && this.takeoffDirX * wx + this.takeoffDirZ * wz < -0.7;
+      if (opposing || reversing) {
+        // Valorant: a full-speed jump with a 180° turn lands ~0.5 m behind the take-off point, so
+        // opposite input brakes and then pushes you back hard (calibrated to that measurement)
+        vx += wx * MOVE.airReverse * dt;
+        vz += wz * MOVE.airReverse * dt;
       } else {
         // strafe acceleration bends the path toward your view when strafe + mouse turn agree...
         const cur = vx * wx + vz * wz;
@@ -323,7 +360,11 @@ export class Player {
           const want = Math.atan2(wz, wx);
           let diff = want - cur;
           diff -= Math.round(diff / (Math.PI * 2)) * Math.PI * 2;
-          const step = Math.sign(diff) * Math.min(Math.abs(diff), MOVE.airTurn * dt);
+          // With a forward key held your path follows the camera (mouse steering); A/D alone only
+          // nudges it via air control. Both keep your speed.
+          const keyRate = (MOVE.accel * MOVE.airControl) / sp2; // rad/s: slower when moving faster
+          const turnRate = fx > 0 ? Math.max(keyRate, MOVE.airFollow) : keyRate;
+          const step = Math.sign(diff) * Math.min(Math.abs(diff), turnRate * dt);
           vx = Math.cos(cur + step) * sp2;
           vz = Math.sin(cur + step) * sp2;
         }
@@ -344,7 +385,10 @@ export class Player {
     const hBefore = Math.hypot(this.vel.x, this.vel.z);
     if (!wasGround) this.airTime += dt;
     this.collide(world, dt);
-    if (wasGround && !this.onGround) this.takeoffSpeed = this.hspeed();
+    if (wasGround && !this.onGround) {
+      this.takeoffSpeed = this.hspeed();
+      this.recordTakeoffDir(this.vel.x, this.vel.z);
+    }
     if (!wasGround && this.onGround) {
       const vy = Math.max(0, -fallSpeed);
       const wasTucked = this.tucked;

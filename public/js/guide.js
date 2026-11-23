@@ -23,7 +23,7 @@ export const GUIDE = [
   {
     title: 'Air strafing',
     drill: 'air-course',
-    body: 'In the air your path swings toward the keys you hold (about 120°/s with A or D alone), as in Valorant\'s Unreal-based movement. Holding the strafe key in the same direction you sweep your mouse bends it faster still, so you can curve around corners and onto ledges. Unlike CS, turning never costs speed, and like Valorant you can\'t gain any: air speed is capped at your take-off speed, so bunny-hopping travels exactly as far as running. Pressing against your motion mid-air only slows you a little.',
+    body: 'In the air, holding W makes your path follow the camera as you turn (up to about 240°/s, keeping your speed), while A or D alone only nudges it (about 44°/s at rifle speed), as in Valorant\'s Unreal-based movement. Holding the strafe key in the same direction you sweep your mouse bends it faster still, so you can curve around corners and onto ledges. Unlike CS, turning never costs speed, and like Valorant you can\'t gain any: air speed is capped at your take-off speed, so bunny-hopping travels exactly as far as running. Reversing mid-air (S, or W after turning around) brakes you hard: a full-speed jump with an immediate 180° lands about 0.5 m behind where you jumped, as in Valorant.',
     points: [
       'Curve right: release W, hold D, sweep the mouse right smoothly.',
       'Your path can only bend so fast (about 280°/s), so start turning early rather than flicking.',
@@ -106,7 +106,7 @@ export const NUMBERS = [
   ['Rifle spread', '0.25° first shot (0.157° ADS), 1° max spraying; +0.8° crouch-moving, +3° walking, +6° running, +10° airborne', 'wiki'],
   ['Sniper spread', '0° scoped and still, 5° unscoped; +7.5° crouch-moving, +10° walking, +15° running or airborne', 'wiki'],
   ['Landing', '+7° spread on every gun for 0.225 s after you land', 'wiki'],
-  ['Tagging', 'Getting hit slows you 72.5% (wiki); recovers over ~0.5 s (estimate)', 'wiki'],
+  ['Tagging', 'Getting hit slows you (and bots) 72.5%, down to the accuracy deadzone (patches 3.0, 9.10); recovers over ~0.5 s (estimate)', 'wiki'],
   ['Rifle damage', 'Head 160 · Body 40 · Legs 34 (150 HP target)', 'wiki'],
   ['Sniper damage', 'Head 255 · Body 150 · Legs 120 · 0.6 shots/s', 'wiki'],
   ['Walk / crouch', '56% / 45% of run speed. Both are silent.', 'est'],
