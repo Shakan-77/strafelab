@@ -83,8 +83,11 @@
     <canvas id="crosshair"></canvas>
     <div id="scope-overlay" hidden><div class="lens"></div><div class="scope-h"></div><div class="scope-v"></div></div>
     <div id="hud">
-      <div id="hud-scenario"></div>
-      <div class="hud-top"><div id="hud-timer"></div><div id="hud-score"></div></div>
+      <div class="hud-top">
+        <div class="hud-drill"><span id="hud-level"></span><strong id="hud-scenario"></strong></div>
+        <div class="hud-readout"><span id="hud-time-label"></span><b id="hud-timer"></b></div>
+        <div class="hud-readout"><span id="hud-score-label"></span><b id="hud-score"></b></div>
+      </div>
       <div id="hud-stats"></div>
       <div id="hud-party" hidden></div>
       <div id="hud-board" hidden></div>
@@ -119,6 +122,8 @@
       <div class="card">
         <h2>Paused</h2>
         <p class="pause-note" role="status"></p>
+        <div id="pause-stats"></div>
+        <details class="input-details"><summary>Input details</summary><p id="pause-input"></p></details>
         <div class="btns">
           <button data-act="resume" class="primary">Resume</button>
           <button data-act="restart">Restart</button>

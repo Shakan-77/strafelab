@@ -326,7 +326,7 @@ function renderHistory() {
       const when = Number.isFinite(entry.ts) && Number.isFinite(date.getTime())
         ? el('time', { class: 'muted small', datetime: date.toISOString() }, HISTORY_DATE.format(date))
         : el('span', { class: 'muted small' }, 'Date unavailable');
-      const details = Object.entries(entry.stats || {}).map(([k, v]) => `${k}: ${v}`).join(' · ');
+      const details = Object.entries(entry.stats || {}).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(' · ');
       return el('li', {},
         el('div', { class: 'recent-run-top' }, when, el('b', { class: entry.score === best ? 'accent' : '' }, fmtScore(m, entry.score))),
         details ? el('div', { class: 'muted small' }, details) : null);
@@ -887,15 +887,17 @@ function backToMenu() {
 function onFinish(res) {
   const meta = res.meta;
   const key = `${meta.id}:${res.difficulty}`;
-  const prev = personalBest(meta, res.difficulty);
+  const runs = historyRuns(loadHistory(), key);
+  const prev = bestRun(meta, runs);
   const practice = !!res.weaponId && res.weaponId !== meta.weapon && !res.party;
-  const pb = !res.dnf && !practice && (!prev || better(meta, res.score, prev.score));
-  if (!res.dnf && !practice) pushHistory(key, { score: res.score, ts: Date.now(), stats: statsObj(res.stats?.slice(0, 3)) });
-  S.results = { ...res, pb, prev, rank: null, practice };
+  const ranked = !res.dnf && !practice;
+  const pb = ranked && (!prev || better(meta, res.score, prev.score));
+  if (ranked) pushHistory(key, { score: res.score, ts: Date.now(), stats: statsObj(res.stats) });
+  S.results = { ...res, pb, prev, lastRun: ranked ? runs.at(-1) : null, rank: null, practice };
   if (res.party) {
     net.send({ t: 'run_result', runId: res.party.runId, score: res.score, display: res.display, stats: statsObj(res.stats), dnf: !!res.dnf });
   }
-  if (!res.dnf && !practice && net.online) {
+  if (ranked && net.online) {
     net.send({ t: 'score_submit', scenario: meta.id, difficulty: res.difficulty, score: res.score, display: res.display, stats: statsObj(res.stats) });
     S.results.submitting = true;
   }
@@ -927,7 +929,11 @@ function renderResults() {
     el('div', { class: 'res-head' }, el('div', { class: 'scn-cat' }, `${meta.category} · ${DIFF_LABEL[r.difficulty]}${r.party ? ' · Party run' : ''}`), el('h2', {}, meta.name)),
     el('div', { class: 'big-score' }, r.dnf && meta.unit !== 'pts' ? 'DNF' : r.display),
     el('div', { class: 'badges' }, badges),
-    el('div', { class: 'stats-grid' }, r.stats.map(([k, v]) => el('div', { class: 'stat' }, el('span', {}, k), el('b', {}, String(v))))),
+    el('div', { class: 'stats-grid' }, r.stats.map(([k, v]) => {
+      const previous = r.lastRun?.stats?.[k];
+      return el('div', { class: 'stat' }, el('span', {}, k), el('b', {}, String(v)),
+        previous != null ? el('small', { class: 'muted' }, `Last run · ${previous}`) : null);
+    })),
     party,
     el('div', { class: 'btns' },
       !r.party ? el('button', { class: 'primary', onclick: () => startSolo(meta.id, r.difficulty) }, 'Play again') : null,

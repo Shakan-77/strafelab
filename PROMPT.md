@@ -10,7 +10,7 @@ Investigate any remaining mouse sticking while a player flicks and clicks quickl
 
 1. Run `python server.py --host 127.0.0.1 --port 8787` and open `http://localhost:8787/` in desktop Chrome or Edge. Test the normal URL for real pointer lock. Use `?debug=1` for scripting and inspecting game state.
 2. In **Grid Taps**, alternate short and long flicks while tapping multiple targets. In **Counter-Strafe Drill**, alternate A and D, jump, and move the mouse on both axes. Test both fullscreen and windowed play, then release capture and use **Resume**.
-3. If the issue reproduces, record the browser, mouse DPI and polling rate, fullscreen and raw-input settings, capture state, incoming and applied mouse deltas, and frame timings around the stall. Use these observations to distinguish lost capture, delayed or duplicate input, and a stalled render frame. Keep diagnostic logging local and temporary.
+3. If the issue reproduces, pause right away and open **Input details**. Record its input mode, delivered movement-event count, sample duration, and longest frame, along with the browser, mouse DPI and polling rate. This is a short browser-side sample. Use it alongside a physical reproduction to distinguish interrupted capture, missing movement events, and slow rendering.
 4. Fix the confirmed cause, then rerun the failing sequence. Check that the mouse rotates by the expected angle, clicks use the latest aim, capture and resume work, and the three newer drills still score correctly. Report which checks used automation and which used a physical mouse.
 
 ## Constraints and references

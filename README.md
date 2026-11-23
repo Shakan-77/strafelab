@@ -1,6 +1,6 @@
 # StrafeLab: Valorant aim & movement trainer
 
-A browser-based 3D trainer tuned to Valorant's mechanics: Valorant sensitivity and FOV, run/walk speeds, movement inaccuracy, counter-strafing, crouch-jumps with silent landings, and one-tap rifle damage. It has 15 drills, parties for training with friends, and a persistent leaderboard.
+A browser-based 3D trainer for Valorant sensitivity, movement and aim practice. It has 16 drills, parties for training with friends, and a persistent leaderboard.
 
 ## Run it
 
@@ -27,6 +27,7 @@ Options: `--port 9000`, `--host 127.0.0.1` (local only). By default the server l
 | Precision | Macro Flicks | 30–150° flicks, each classified as clean, overshoot or undershoot. |
 | Precision | Grid Taps | Rapid taps and streaks on a five-by-three grid. |
 | Precision | Multi-Target Switch | Switching between targets at different depths before they expire. |
+| Precision | Strafe Transfers | Two taps on a moving target at head height. Compare first-tap and follow-up times with your last run. |
 | Precision | Strafe Tracking | Continuous aim on an original humanoid bot, measured by time on target and on the head. |
 | Sniper | Sniper: Strafing Targets | Bolt-action, 2.5x/5x scope, vs ADAD strafers and doorway crossers. |
 | Reaction | Reaction Time | 12-trial visual reaction test. Hard adds go/no-go decoys. |

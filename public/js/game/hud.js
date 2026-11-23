@@ -51,9 +51,12 @@ export class Hud {
 
   reset(meta, difficulty, weapon, opts) {
     this.cache.clear();
-    this.set(this.name, `${meta.name} · ${difficulty.toUpperCase()}${opts.party ? ' · PARTY' : ''}`);
-    this.set(this.timer, '');
-    this.set(this.score, '');
+    this.set(this.name, meta.name);
+    document.getElementById('hud-level').textContent = difficulty + (opts.party ? ' · Party' : '');
+    document.getElementById('hud-time-label').textContent = meta.duration ? 'Time left' : 'Elapsed';
+    document.getElementById('hud-score-label').textContent = { ms: 'Reaction', time: 'Course time' }[meta.unit] || 'Score';
+    this.clock(meta.duration || 0, !!meta.duration);
+    this.set(this.score, '—', 'score');
     this.statsEl.replaceChildren();
     this.partyEl.hidden = !opts.party;
     this.partyEl.replaceChildren();
@@ -65,7 +68,7 @@ export class Hud {
     this.vignette.className = '';
     this.scope(false);
     this.speedEl.hidden = !opts.showSpeed;
-    this.ammoEl.hidden = !!weapon.noFire;
+    this.ammoEl.hidden = !Number.isFinite(weapon.mag) || !!weapon.noFire;
     this.reloadBar.hidden = true;
     this.boltEl.hidden = true;
     this.fpsEl.hidden = !opts.showFps;
@@ -73,14 +76,28 @@ export class Hud {
     this.countdownEl.hidden = true;
   }
 
-  stats(lines) {
-    const key = lines.map((l) => l.join(':')).join('|');
-    if (this.cache.get('stats') === key) return;
-    this.cache.set('stats', key);
-    this.statsEl.replaceChildren(...lines.map(([k, v, cls]) => el('div', { class: `row ${cls || ''}` }, el('span', {}, k), el('b', {}, v))));
+  clock(seconds, countdown) {
+    const s = Math.max(0, countdown ? Math.ceil(seconds) : Math.floor(seconds));
+    this.set(this.timer, `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`, 'timer');
   }
 
-  speed(sp, run, acc, onGround) {
+  stats(lines) {
+    // Two live measures fit below the timer. The pause panel has the full breakdown.
+    const live = lines.slice(0, 2);
+    live.forEach(([label, value, cls = ''], i) => {
+      let row = this.statsEl.children[i];
+      if (!row) {
+        row = el('div', {}, el('span'), el('b'));
+        this.statsEl.append(row);
+      }
+      if (row.className !== cls) row.className = cls;
+      if (row.firstChild.textContent !== label) row.firstChild.textContent = label;
+      if (row.lastChild.textContent !== String(value)) row.lastChild.textContent = value;
+    });
+    while (this.statsEl.children.length > live.length) this.statsEl.lastChild.remove();
+  }
+
+  speed(sp, run, acc, onGround, recovering) {
     const frac = Math.min(1, sp / run);
     this.speedFill.style.transform = `scaleX(${frac.toFixed(3)})`;
     const markPct = `${((acc / run) * 100).toFixed(1)}%`;
@@ -88,12 +105,13 @@ export class Hud {
       this.cache.set('mark', markPct);
       this.speedMark.style.left = markPct;
     }
-    const state = !onGround ? 'air' : sp <= acc ? 'ok' : 'moving';
+    const state = !onGround ? 'air' : recovering ? 'landing' : sp <= acc ? 'ok' : 'moving';
     if (this.cache.get('speedState') !== state) {
       this.cache.set('speedState', state);
       this.speedEl.dataset.state = state;
     }
-    this.set(this.speedLabel, `${sp.toFixed(2)} m/s${!onGround ? ' · AIR' : sp <= acc ? ' · ACCURATE' : ''}`, 'speedLabel');
+    const label = { air: 'Airborne', landing: 'Landing', ok: 'Steady', moving: 'Moving' }[state];
+    this.set(this.speedLabel, `${label} · ${sp.toFixed(1)} m/s`, 'speedLabel');
   }
 
   /**

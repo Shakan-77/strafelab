@@ -23,7 +23,7 @@ export const GUIDE = [
   {
     title: 'Air strafing',
     drill: 'air-course',
-    body: 'In the air, the camera steers. While you hold any movement key (W, A or D), your path turns with the camera as you move the mouse (up to about 240°/s, keeping your speed), so you can curve around corners and onto ledges. With no key held, the mouse doesn\'t steer at all. Keys on their own barely steer: a full-speed jump holding W and D drifts only about 0.3 m right, roughly 1/12 of the jump, as in Valorant. Unlike CS, turning never costs speed, and like Valorant you can\'t gain any: air speed is capped at your take-off speed, so bunny-hopping travels exactly as far as running. Reversing mid-air (S, or W after turning around) brakes you hard: a full-speed jump with an immediate 180° lands about 0.5 m behind where you jumped, as in Valorant.',
+    body: 'A running jump carries your take-off momentum. With a movement key held, your path can follow your camera at up to about 240°/s. Release the movement keys to look around while travelling along the same line. In StrafeLab, holding W and D with a steady camera drifts about 0.3 m right on a full-speed jump. A sharp reversal can brake the jump and carry you back toward take-off. The steering strength and jump arc are estimates.',
     points: [
       'Curve right: hold W (or D), sweep the mouse right smoothly. Your path ends up where you look.',
       'Your path can only bend so fast (about 240°/s), so start turning early. A sudden 180° flick with W brakes you instead of turning.',

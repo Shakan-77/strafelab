@@ -42,8 +42,8 @@ export const MOVE = {
   // Riot doesn't publish Valorant's value. 0.0645 (≈1.34 m/s² sideways, ~14°/s turn at 5.4 m/s)
   // makes a full-speed W jump with D held drift ~0.3 m right: about 1/12 of the 3.6 m jump.
   airControl: 0.0645,
-  airFollow: (240 * Math.PI) / 180, // rad/s your path can follow the camera with W held (estimate)
-  airCap: 0.7, // steering projection cap for running jumps
+  airFollow: (240 * Math.PI) / 180, // rad/s your path can follow the camera with a key held (estimate)
+  minReverseSpeed: 0.7,
   airStartCap: 1.8, // estimated speed available when jumping from rest
   walkMult: 0.56,
   crouchMult: 0.45,
@@ -103,6 +103,11 @@ export class Player {
     this.accurateSpeed = accurateSpeed;
     this.jumpBuffer = 0;
     this.takeoffSpeed = 0;
+    this.tagT = 0;
+    this.takeoffY = undefined;
+    this.airYaw = undefined;
+    this.uncrouchedMidAir = false;
+    this.recordTakeoffDir(0, 0);
     this.stepAcc = 0;
     this.stop = null;
   }
@@ -111,6 +116,15 @@ export class Player {
     this.pos.set(...pos);
     this.prev.copy(this.pos);
     this.vel.set(0, 0, 0);
+    this.onGround = false;
+    this.jumpBuffer = 0;
+    this.landPenalty = 0;
+    this.tagT = 0;
+    this.takeoffSpeed = 0;
+    this.takeoffY = undefined;
+    this.airYaw = undefined;
+    this.uncrouchedMidAir = false;
+    this.recordTakeoffDir(0, 0);
     this.stop = null;
     if (this.tucked) {
       this.tucked = false;
@@ -335,7 +349,7 @@ export class Player {
       // (against your current path, so a smooth mouse turn just steers; a flick or S brakes)
       // and it keeps pushing back the way you came until you're back up to take-off speed
       const backToTakeoff = this.takeoffDirX * wx + this.takeoffDirZ * wz < -0.7 && sp0 < this.takeoffSpeed - 0.05;
-      const reversing = fx !== 0 && this.takeoffSpeed > MOVE.airCap && (ux * wx + uz * wz < -0.7 || backToTakeoff);
+      const reversing = fx !== 0 && this.takeoffSpeed > MOVE.minReverseSpeed && (ux * wx + uz * wz < -0.7 || backToTakeoff);
       if (opposing || reversing) {
         // Valorant: a full-speed jump with a 180° turn lands ~0.5 m behind the take-off point, so
         // opposite input brakes and then pushes you back hard (calibrated to that measurement)
@@ -344,8 +358,7 @@ export class Player {
       } else {
         // strafe acceleration bends the path toward your view when strafe + mouse turn agree...
         const cur = vx * wx + vz * wz;
-        const drive = buildingSpeed ? startingSpeed : Math.min(wishSpeed, MOVE.airCap);
-        const add = drive - cur;
+        const add = startingSpeed - cur;
         // running jumps steer by camera (below), so only slow jumps build speed from keys here
         if (add > 0 && buildingSpeed) {
           const acc = Math.min(MOVE.airAccel * wishSpeed * dt, add);

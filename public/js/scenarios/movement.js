@@ -430,8 +430,8 @@ export class AirCourse extends TimeTrial {
     const G = this.d({ easy: [2.2, 2.6, 3.1], medium: [2.6, 3.1, 3.7], hard: [3.0, 3.5, 4.1] });
     const W = this.d({ easy: 3.2, medium: 2.6, hard: 2.0 });
     const L = this.d({ easy: 6, medium: 5, hard: 4 });
-    // Tuned by simulation: no strafing never lands; a synced air strafe of roughly
-    // 60-110°/s (easy), 95-175°/s (medium) or 125-230°/s (hard) does.
+    // Simulated from the inside stripe at the runway lip. Hard bends need
+    // a faster camera sweep than Easy or Medium.
     const bx = this.d({ easy: 1.5, medium: 1.8, hard: 2.0 });
     const drop = this.d({ easy: 1.8, medium: 1.6, hard: 1.4 });
     const c = new Course(w);

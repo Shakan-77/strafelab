@@ -25,6 +25,8 @@ const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
 
+const frameSample = () => ({ t: 0, n: 0, moves: 0, longest: 0 });
+
 export class Game {
   constructor({ canvas, settings, audio, net, debug, onFinish, onQuit }) {
     this.canvas = canvas;
@@ -74,6 +76,7 @@ export class Game {
 
     this.state = 'idle';
     this.yaw = 0;
+    this.physicsYaw = 0;
     this.pitch = 0;
     this.recoil = 0;
     this.zoomIndex = 0;
@@ -85,11 +88,8 @@ export class Game {
     this.firing = false;
     this.locked = false;
     this.lockPending = false;
-    this.mouseX = 0;
-    this.mouseY = 0;
-    this.lastRawMotion = -Infinity;
     this.acc = 0;
-    this.fpsAcc = { t: 0, n: 0 };
+    this.fpsAcc = frameSample();
     this.netT = { live: 0, pos: 0 };
     this.party = null;
 
@@ -184,7 +184,7 @@ export class Game {
       }
       // Stop browser shortcuts (Ctrl+H, Ctrl+F, Ctrl+D, F5, the Alt menu...) from firing mid-game.
       if (!PASS_KEYS.has(e.code)) e.preventDefault();
-      if (!this.locked && !this.debug) return;
+      if (!this.acceptsMouseInput()) return;
       if (e.repeat || this.held.has(e.code)) return;
       this.held.add(e.code);
       this.inputDown(e.code, e.timeStamp);
@@ -218,9 +218,14 @@ export class Game {
       const code = `Mouse${e.button}`;
       if (this.held.delete(code)) this.inputUp(code);
     }, true);
-    const recordLook = (e) => this.queueLook(e);
-    document.addEventListener('mousemove', recordLook, { capture: true, passive: true });
-    this.canvas.addEventListener('pointerrawupdate', recordLook, { passive: true });
+    // Pointer Lock supplies unbounded relative motion, including while a button is held.
+    // unadjustedMovement is negotiated on lock. Mixing in pointerrawupdate counts the
+    // same physical motion twice or drops part of a coalesced move.
+    document.addEventListener('mousemove', (e) => {
+      if (!this.acceptsMouseInput()) return;
+      if (e.movementX || e.movementY) this.fpsAcc.moves++;
+      this.look(e.movementX, e.movementY);
+    }, { capture: true, passive: true });
     for (const type of ['dragstart', 'selectstart']) {
       document.addEventListener(type, (e) => {
         if (this.acceptsMouseInput()) e.preventDefault();
@@ -231,7 +236,7 @@ export class Game {
       (e) => {
         if (!this.inGame()) return;
         e.preventDefault(); // no page scroll, no Ctrl+wheel zoom
-        if ((!this.locked && !this.debug) || e.deltaY === 0) return;
+        if (!this.acceptsMouseInput() || e.deltaY === 0) return;
         this.inputWheel(e.deltaY < 0 ? 'WheelUp' : 'WheelDown', e.timeStamp);
       },
       { passive: false, capture: true },
@@ -295,8 +300,6 @@ export class Game {
   releaseAll() {
     this.held.clear();
     this.firing = false;
-    this.mouseX = this.mouseY = 0;
-    this.lastRawMotion = -Infinity;
     if (this.modes.scope === 'hold' && this.zoomIndex) this.setZoom(0);
     this.hud.showBoard(false);
     this.syncInput();
@@ -316,22 +319,6 @@ export class Game {
     return this.inGame() && !this.paused && (this.debug ? this.locked : document.pointerLockElement === this.canvas);
   }
 
-  queueLook(event) {
-    if (!this.acceptsMouseInput()) return;
-    const dx = Number.isFinite(event.movementX) ? event.movementX : 0;
-    const dy = Number.isFinite(event.movementY) ? event.movementY : 0;
-    if (!dx && !dy) return;
-    if (event.type === 'pointerrawupdate') {
-      if (!this.settings.rawInput || event.pointerType !== 'mouse') return;
-      this.lastRawMotion = event.timeStamp;
-    } else if (event.timeStamp <= this.lastRawMotion) {
-      // Chromium sends the corresponding move with the same timestamp, or coalesces it.
-      return;
-    }
-    this.mouseX += dx;
-    this.mouseY += dy;
-  }
-
   /** Mouse counts → view angles using Valorant's yaw (0.07°/count × sens). */
   look(dx, dy) {
     let deg = VALORANT_YAW * this.settings.sens;
@@ -341,13 +328,6 @@ export class Game {
     }
     this.yaw -= dx * deg * DEG;
     this.pitch = clamp(this.pitch - dy * deg * DEG, -PITCH_LIMIT, PITCH_LIMIT);
-  }
-
-  /** Apply all pending counts before the next physics step, shot, or zoom change. */
-  flushLook() {
-    if (!this.mouseX && !this.mouseY) return;
-    this.look(this.mouseX, this.mouseY);
-    this.mouseX = this.mouseY = 0;
   }
 
   /** Request the pointer first so a raw-input retry can still use the click gesture. */
@@ -371,6 +351,7 @@ export class Game {
 
   async lockPointer() {
     const c = this.canvas;
+    this.captureMode = this.settings.rawInput ? 'Unadjusted input requested' : 'System mouse input';
     if (!this.settings.rawInput) {
       await c.requestPointerLock();
       return;
@@ -379,6 +360,7 @@ export class Game {
       await c.requestPointerLock({ unadjustedMovement: true });
     } catch (error) {
       if (error.name !== 'NotSupportedError') throw error;
+      this.captureMode = 'System mouse input';
       await c.requestPointerLock();
       this.hud.banner('Raw input unavailable. Using system mouse input.', 'warn', 3);
     }
@@ -447,7 +429,8 @@ export class Game {
   }
 
   onLocked() {
-    this.lastRawMotion = -Infinity;
+    this.lastInputSample = null;
+    this.fpsAcc = frameSample();
     this.audio.ensure();
     document.getElementById('overlay-lock').hidden = true;
     document.getElementById('overlay-pause').hidden = true;
@@ -467,6 +450,13 @@ export class Game {
       ? 'Party run in progress, so the timer keeps running.'
       : 'The timer is stopped.';
     p.querySelector('.pause-note').textContent = reason ? `${reason} ${timing}` : timing;
+    const sample = this.lastInputSample || this.fpsAcc;
+    document.getElementById('pause-input').textContent = sample.n
+      ? `${this.captureMode || 'Debug input'} · ${sample.moves} mouse moves in ${sample.t.toFixed(2)} s · longest frame ${Math.round(sample.longest * 1000)} ms (last sample before pause).`
+      : 'No frames sampled since capture.';
+    const metrics = this.state === 'running' ? this.scenario.hud() : [];
+    document.getElementById('pause-stats').replaceChildren(...metrics.map(([k, v]) =>
+      el('div', {}, el('span', {}, k), el('b', {}, v))));
     p.querySelector('[data-act="restart"]').hidden = !!this.party;
     this.renderKeyHints();
   }
@@ -517,7 +507,7 @@ export class Game {
     this.timeSinceShot = 99;
     this.shotIndex = 0;
     this.recoil = 0;
-    this.mouseX = this.mouseY = 0;
+    this.hudSampleIn = 0;
     this.setZoom(0);
     this.scenario = new Cls(this, meta, difficulty, this.rng);
     this.scenario.build(this.world);
@@ -526,6 +516,7 @@ export class Game {
     this.player.allowMove = this.scenario.allowMove !== false;
     this.player.allowJump = this.scenario.allowJump !== false;
     this.yaw = sp.yaw || 0;
+    this.physicsYaw = this.yaw;
     this.pitch = sp.pitch || 0;
     this.killY = this.scenario.killY ?? this.world.minY - 6;
     this.frozenUntil = 0;
@@ -583,7 +574,7 @@ export class Game {
 
   restart() {
     if (this.party || !this.meta) return;
-    this.load(this.meta, this.difficulty, (Math.random() * 2 ** 31) >>> 0, { countdown: 3 });
+    this.load(this.meta, this.difficulty, (Math.random() * 2 ** 31) >>> 0, { countdown: 3, weapon: this.weapon.id });
     this.requestLock();
   }
 
@@ -595,7 +586,6 @@ export class Game {
 
   stop() {
     this.state = 'idle';
-    this.mouseX = this.mouseY = 0;
     this.unload();
     if (document.pointerLockElement) document.exitPointerLock();
     this.exitFullscreen();
@@ -636,6 +626,7 @@ export class Game {
   respawn(pos, yaw = null, pitch = null) {
     this.player.teleport(pos);
     if (yaw != null) this.yaw = yaw;
+    this.physicsYaw = this.yaw;
     if (pitch != null) this.pitch = pitch;
   }
 
@@ -693,7 +684,6 @@ export class Game {
 
   // ------------------------------------------------------------------ weapon
   setZoom(index) {
-    this.flushLook();
     const sc = this.weapon?.scope;
     const zooms = sc?.zooms || [];
     this.zoomIndex = index > zooms.length ? 0 : index;
@@ -734,7 +724,6 @@ export class Game {
 
   trigger(timeStamp) {
     if (this.state !== 'running' || this.paused) return;
-    this.flushLook();
     this.audio.ensure();
     if (this.scenario.onFireInput && this.scenario.onFireInput(timeStamp)) return;
     this.tryFire(0, timeStamp);
@@ -829,10 +818,10 @@ export class Game {
     this.skinFx?.onShot();
 
     if (this.scenario.feedback === 'movement' && this.settings.showFeedback) {
-      if (!p.onGround) this.hud.feedback('IN AIR: inaccurate', 'bad');
-      else if (info.justLanded) this.hud.feedback('JUST LANDED: +7° for 0.225 s', 'bad');
-      else if (info.accurate) this.hud.feedback(`STOPPED · ${speed.toFixed(2)} m/s`, 'good');
-      else this.hud.feedback(`MOVING · ${speed.toFixed(2)} m/s`, 'bad');
+      if (!p.onGround) this.hud.feedback('Shot in air', 'bad');
+      else if (info.justLanded) this.hud.feedback('Shot during landing', 'bad');
+      else if (info.accurate) this.hud.feedback('Steady shot', 'good');
+      else this.hud.feedback('Shot while moving', 'bad');
     }
     this.scenario.onShot(info);
     if (this.ammo <= 0) this.startReload();
@@ -968,30 +957,31 @@ export class Game {
     let dt = (now - this.lastT) / 1000;
     this.lastT = now;
     if (!(dt > 0)) dt = 0;
-    if (dt > 0.1) dt = 0.1;
-
     this.fpsAcc.t += dt;
+    this.fpsAcc.longest = Math.max(this.fpsAcc.longest, dt);
     this.fpsAcc.n += 1;
     if (this.fpsAcc.t >= 0.5) {
       this.hud.fps(Math.round(this.fpsAcc.n / this.fpsAcc.t));
-      this.fpsAcc.t = 0;
-      this.fpsAcc.n = 0;
+      this.lastInputSample = this.fpsAcc;
+      this.fpsAcc = frameSample();
     }
 
+    if (dt > 0.1) dt = 0.1;
     const simulate = !this.paused || !!this.party;
     const advance = simulate && this.state !== 'ready';
-    this.flushLook();
     let alpha = 1;
     if (advance) {
       if (this.state === 'countdown') this.tickCountdown(dt);
       this.acc += dt;
-      let steps = 0;
-      while (this.acc >= TICK && steps < 40) {
-        this.fixed(TICK);
+      let steps = Math.floor(this.acc / TICK);
+      while (steps > 0) {
+        // A render frame can contain several physics ticks. Share the turn across
+        // them so the airborne turn limit is applied over the whole frame.
+        this.physicsYaw += (this.yaw - this.physicsYaw) / steps;
+        this.fixed(TICK, this.physicsYaw);
         this.acc -= TICK;
-        steps += 1;
+        steps -= 1;
       }
-      if (steps >= 40) this.acc = 0;
       alpha = this.acc / TICK;
     }
     this.lastAlpha = alpha;
@@ -1031,10 +1021,10 @@ export class Game {
     if (this.countdown <= 0) this.begin();
   }
 
-  fixed(dt) {
+  fixed(dt, yaw = this.yaw) {
     const p = this.player;
     p.frozen = this.state !== 'running' || this.scenarioTime() < this.frozenUntil || (this.paused && !!this.party);
-    p.step(dt, this.yaw, this.world);
+    p.step(dt, yaw, this.world);
     if (this.state === 'running') {
       for (const e of this.entities) e.fixedStep?.(dt);
       this.scenario.fixedUpdate?.(dt);
@@ -1116,13 +1106,17 @@ export class Game {
     if (!s) return;
     if (this.state === 'running') {
       const limit = this.meta.duration;
-      h.set(h.timer, limit ? Math.max(0, limit - s.elapsed).toFixed(1) : s.elapsed.toFixed(2), 'timer');
-      h.set(h.score, s.liveDisplay(), 'score');
-      h.stats(s.hud());
+      this.hudSampleIn -= dt;
+      if (this.hudSampleIn <= 0) {
+        this.hudSampleIn = 0.1;
+        h.clock(limit ? limit - s.elapsed : s.elapsed, !!limit);
+        h.set(h.score, s.liveDisplay(), 'score');
+        h.stats(s.hud());
+      }
     }
-    if (this.settings.showSpeed && s.allowMove !== false) h.speed(p.hspeed(), p.runSpeed, p.accurateSpeed, p.onGround);
+    if (!h.speedEl.hidden) h.speed(p.hspeed(), p.runSpeed, p.accurateSpeed, p.onGround, p.landPenalty > 0 && !this.weapon.noLandPenalty);
     const w = this.weapon;
-    if (!w.noFire) {
+    if (!h.ammoEl.hidden) {
       h.ammo({
         cur: this.ammo,
         max: w.mag,

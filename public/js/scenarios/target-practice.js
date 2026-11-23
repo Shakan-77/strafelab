@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Scenario } from './base.js';
 import { Bot, Orb } from '../game/targets.js';
 import { backdrop, floor } from './layouts.js';
-import { pct } from '../util.js';
+import { fmtMs, median, pct } from '../util.js';
 
 class StationaryPractice extends Scenario {
   constructor(...args) {
@@ -67,7 +67,9 @@ class TapPractice extends StationaryPractice {
   }
 
   stats() {
-    return [['Hits', this.hits], ['Accuracy', `${pct(this.hits, this.shots)}%`], ['Best streak', this.bestStreak],
+    const minutes = Math.min(this.elapsed, this.meta.duration) / 60;
+    return [['Hits', this.hits], ['Accuracy', `${pct(this.hits, this.shots)}%`],
+      ['Hits per minute', minutes > 0 ? (this.hits / minutes).toFixed(1) : '0.0'], ['Best streak', this.bestStreak],
       ['Misses', this.shots - this.hits]];
   }
 }
@@ -159,6 +161,69 @@ export class MultiTargetSwitch extends TapPractice {
 
 const CENTER = new THREE.Vector2(0, 0);
 
+// A first tap acquires the target. It keeps moving until a second tap confirms it.
+class TransferOrb extends TapOrb {
+  damage() {
+    this.taps += 1;
+    this.mat.emissiveIntensity = 2;
+    return this.taps === 2;
+  }
+}
+
+export class StrafeTransfers extends StationaryPractice {
+  begin() {
+    this.clears = 0;
+    this.acquisitions = [];
+    this.confirmations = [];
+    this.side = this.rng.sign();
+    this.speed = this.d({ easy: 1.5, medium: 2.5, hard: 3.8 });
+    this.nextTarget();
+  }
+
+  nextTarget() {
+    this.side *= -1;
+    this.centerX = this.side * this.rng.float(1.6, 4.6);
+    this.direction = this.rng.sign();
+    const pos = new THREE.Vector3(this.centerX, this.rng.float(1.4, 1.85), -this.rng.float(9, 16));
+    if (this.target) this.target.relocate(pos);
+    else this.target = new TransferOrb(this.game, pos, this.d({ easy: 0.32, medium: 0.23, hard: 0.17 }));
+    this.target.taps = 0;
+  }
+
+  update() {
+    const phase = (this.elapsed - this.target.spawnedAt) * this.speed;
+    // Triangle wave in metres. Constant-speed passes with visible reversals.
+    this.target.position.x = this.centerX + this.direction * (1 - Math.abs((phase + 1) % 4 - 2));
+    this.target.mesh.updateMatrixWorld();
+  }
+
+  onShot(shot) {
+    this.countShot(shot);
+    if (!shot.hit) {
+      this.points -= 10;
+    } else if (shot.killed) {
+      this.confirmations.push(this.elapsed - this.firstTap);
+      this.clears++;
+      this.points += 75;
+      this.nextTarget();
+    } else {
+      this.firstTap = this.elapsed;
+      this.acquisitions.push(this.elapsed - this.target.spawnedAt);
+      this.points += 25;
+    }
+  }
+
+  hud() {
+    return [['Clears', this.clears ?? 0], ['Accuracy', `${pct(this.hits, this.shots)}%`]];
+  }
+
+  stats() {
+    return [...this.hud(),
+      ['Median first tap', this.acquisitions.length ? fmtMs(median(this.acquisitions)) : '—'],
+      ['Median follow-up', this.confirmations.length ? fmtMs(median(this.confirmations)) : '—']];
+  }
+}
+
 export class StrafeTracking extends StationaryPractice {
   constructor(...args) {
     super(...args);
@@ -166,6 +231,8 @@ export class StrafeTracking extends StationaryPractice {
     this.intersections = [];
     this.onTargetTime = 0;
     this.headTime = 0;
+    this.holdTime = 0;
+    this.bestHold = 0;
     this.onTarget = false;
   }
 
@@ -185,14 +252,22 @@ export class StrafeTracking extends StationaryPractice {
 
   update(dt) {
     this.onTarget = false;
-    if (this.game.paused || !this.game.locked) return;
+    if (this.game.paused || !this.game.locked) {
+      this.holdTime = 0;
+      return;
+    }
     this.ray.setFromCamera(CENTER, this.game.camera);
     this.intersections.length = 0;
     const [hit] = this.ray.intersectObjects(this.bot.hitMeshes, false, this.intersections);
-    if (!hit) return;
+    if (!hit) {
+      this.holdTime = 0;
+      return;
+    }
     const step = Math.min(dt, Math.max(0, this.meta.duration - (this.elapsed - dt)));
     this.onTarget = true;
     this.onTargetTime += step;
+    this.holdTime += step;
+    this.bestHold = Math.max(this.bestHold, this.holdTime);
     if (hit.object.userData.hit.zone === 'head') this.headTime += step;
     this.points = this.onTargetTime * 100;
   }
@@ -202,10 +277,13 @@ export class StrafeTracking extends StationaryPractice {
       ['Time on target', `${this.onTargetTime.toFixed(2)} s`],
       ['Tracking accuracy', `${pct(this.onTargetTime, Math.min(this.elapsed, this.meta.duration))}%`],
       ['Time on head', `${this.headTime.toFixed(2)} s`],
+      ['Longest hold', `${this.bestHold.toFixed(2)} s`],
     ];
   }
 
   hud() {
-    return [...this.stats(), ['Crosshair', this.onTarget ? 'On target' : 'Off target', this.onTarget ? 'good' : '']];
+    return [['On target', `${pct(this.onTargetTime, Math.min(this.elapsed, this.meta.duration))}%`],
+      ['Current hold', `${this.holdTime.toFixed(1)} s`, this.onTarget ? 'good' : ''],
+      ['Longest hold', `${this.bestHold.toFixed(2)} s`]];
   }
 }

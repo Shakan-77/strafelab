@@ -1,6 +1,6 @@
 # StrafeLab context
 
-StrafeLab is a browser-based 3D aim and movement trainer for Valorant practice. The current use is local development and playtesting on Windows. The repository is [Shakan-77/strafelab](https://github.com/Shakan-77/strafelab). The most recent gameplay baseline is [commit `976789f`](https://github.com/Shakan-77/strafelab/commit/976789f). [Changes since `100862e`](#changes-since-100862e) explains the last three commits.
+StrafeLab is a browser-based 3D aim and movement trainer for Valorant practice. The current use is local development and playtesting on Windows. The repository is [Shakan-77/strafelab](https://github.com/Shakan-77/strafelab). [Changes since `100862e`](#changes-since-100862e) records Shakan-77's gameplay changes through [`976789f`](https://github.com/Shakan-77/strafelab/commit/976789f).
 
 ## Run locally
 
@@ -19,7 +19,7 @@ The regular URL uses real browser mouse capture. Add `?debug=1` to bypass captur
 | Path | Responsibility |
 | --- | --- |
 | `server.py` | Static files, WebSockets, parties, score validation, and leaderboards. Scores persist in `data/leaderboard.json`. |
-| `public/data/scenarios.json` | Shared metadata for all 15 drills, including weapon, duration, difficulty options, and score bounds. |
+| `public/data/scenarios.json` | Shared metadata for all 16 drills, including weapon, duration, difficulty options, and score bounds. |
 | `public/js/main.js` and `public/js/settings.js` | Menus, settings, controls, the per-drill weapon picker, results, and per-drill practice history. Settings and history persist in the browser. |
 | `public/js/game/game.js` | Pointer lock, fullscreen, mouse look, fire timing, camera, simulation loop, and hit registration. |
 | `public/js/game/player.js` | Movement physics. All tuning constants are in the `MOVE` object at the top. Also handles jump and landing sound decisions and tagging. |
@@ -31,10 +31,11 @@ The regular URL uses real browser mouse capture. Add `?debug=1` to bypass captur
 
 ## Gameplay baseline
 
-- **Grid Taps** keeps four active targets on a five-by-three grid. **Multi-Target Switch** uses four lanes with targets at different depths and expiration penalties. **Strafe Tracking** measures time on a moving humanoid bot and time on its head. All three are under **Train → Precision**.
+- **Grid Taps** keeps four active targets on a five-by-three grid. **Multi-Target Switch** uses four lanes with targets at different depths and expiration penalties. **Strafe Transfers** measures the time to acquire a moving target and confirm a second tap. **Strafe Tracking** measures time on a moving humanoid bot, time on its head, and the longest uninterrupted hold. All four are under **Train → Precision**.
 - **Settings → Mouse** has separate hipfire sensitivity, rifle ADS multiplier, and sniper scope multiplier. Hipfire uses `0.07° × sensitivity` per raw count. DPI affects the reported cm/360. The field of view is 103° horizontally at 16:9.
 - Player physics run at 128 Hz. The rifle run speed is 5.4 m/s, and the movement accuracy cutoff is 27.5% of that speed. Braking, acceleration, and air steering are StrafeLab estimates. [Vandal stats](https://wiki.playvalorant.com/en-us/Vandal) · [Riot patch 3.0](https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-3-0/)
-- The input code requests pointer lock before entering fullscreen. It collects early raw movement where available, ignores corresponding `mousemove` deltas, and applies pending motion before physics, aiming down sights, and firing. Losing capture pauses the run. Resume reacquires capture.
+- Pointer lock supplies one `mousemove` stream. Raw input requests unadjusted movement when it acquires capture. Each event updates aim immediately, and the fixed-step simulation distributes camera yaw across the ticks in a frame for air steering. Losing capture pauses the run. Resume reacquires capture.
+- The in-drill HUD keeps live readouts near the edges. Results compare available metrics with the last ranked run of the same drill and difficulty. [Aimlabs’ Valorant routine](https://aimlabs.com/articles/aimlabs/the-valorant-aim-basics-routine-your-new-favorite-playlist/) and its [target-switching fundamentals](https://aimlabs.com/articles/aimlabs/train-your-core-fundamentals-with-the-aimlabs-aim-basics-routine/) informed the drill and metrics.
 - Precision taps use event timestamps for fire cadence. Grid Taps and Multi-Target Switch reuse four target meshes. Hitmarker feedback restarts its animation without a synchronous layout read.
 - The rifle skins (Pulse Core, Verdant Bloom, Bastion Gilt, Wraithbound) and bot models are original, with synthesized kill sounds. The user asked for the RGX, Gaia, Primordium and Reaver skins and sounds from a third-party site. Those are Riot assets, so they were not copied. Any future official-skin integration requires authorized files and permission from Riot. [Riot fan-content policy](https://www.riotgames.com/en/legal)
 
@@ -95,7 +96,9 @@ In game scripts, set `__sl.net.send = () => false` so test runs don't reach the 
 
 Chrome automation verified mouse look while strafing and jumping in fullscreen, pause and resume after capture loss, the 360° turn calculation, separate ADS and scope settings, and 30 consecutive Grid Taps hits with four reused targets. Earlier browser checks also covered all 15 drill starts, the three new leaderboards, old local history entries, and a party start for Strafe Tracking.
 
-- **Mouse sticking:** the user reported intermittent mouse sticking during rapid Grid Taps flicks and clicks, and earlier while strafing or airborne in Counter-Strafe. The exact freeze did not reproduce in automation. A physical-mouse playtest on the affected setup is still pending.
+After integrating the collaborator's commits, Chrome automation checked native capture and resume, 64 scripted Grid Taps hits, two-hit transfer scoring, last-run comparisons, and the selected weapon on restart. The physics checks covered steering at 30, 60 and 144 FPS, a reachable trajectory through each Air Strafe Course bend on every difficulty, mid-air reversal, tagging, and quiet landings.
+
+- **Mouse sticking:** the user reported intermittent mouse sticking during rapid Grid Taps flicks and clicks, and earlier while strafing or airborne in Counter-Strafe. The exact freeze did not reproduce in automation. A physical-mouse playtest on the affected setup is still pending. If it recurs, pause and open **Input details** to check delivered mouse events and the longest recent frame.
 - **Air movement feel:** the air values are still estimates. The user has been tuning them against Valorant one behaviour at a time. Hand-playtesting of `976789f` is pending.
 
 For browser input and hit-testing references, see the [MIT-licensed AimForge input code](https://github.com/Shiraikuroko123/aimforge/blob/main/js/game.js), [VANTA](https://github.com/aimtrainer-code/aim-trainer), and [Three.js PointerLockControls](https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/PointerLockControls.js).
