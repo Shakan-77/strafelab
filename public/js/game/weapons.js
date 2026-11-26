@@ -17,6 +17,7 @@ export const WEAPONS = {
     reload: 2.5,
     dmg: { head: 160, body: 40, legs: 34 },
     runSpeed: 5.4,
+    equip: 1.0, // s until you can fire after drawing it (Vandal, wiki)
     accurateFrac: 0.275, // deadzone 27.5%
     spread: { first: 0.25 },
     pen: { crouch: 0.8, walk: 3, run: 6, air: 10 },
@@ -36,6 +37,7 @@ export const WEAPONS = {
     reload: 3.7,
     dmg: { head: 255, body: 150, legs: 120 },
     runSpeed: 5.13,
+    equip: 1.5, // s (Operator, wiki)
     accurateFrac: 0.15, // deadzone 15%
     spread: { first: 5 }, // unscoped (hip) first shot
     pen: { crouch: 7.5, walk: 10, run: 15, air: 15 },
@@ -53,6 +55,7 @@ export const WEAPONS = {
     reload: 0,
     dmg: { head: 999, body: 999, legs: 999 },
     runSpeed: 5.4,
+    equip: 0.5, // s (estimate)
     accurateFrac: 1,
     spread: { first: 0 },
     pen: { crouch: 0, walk: 0, run: 0, air: 0 },
@@ -73,6 +76,7 @@ export const WEAPONS = {
     note: 'Fastest run speed (6.75 m/s)',
     noFire: true,
     runSpeed: 6.75,
+    equip: 0.6, // s (estimate)
     accurateFrac: 0.275,
     spread: { first: 0 },
     pen: { crouch: 0, walk: 0, run: 0, air: 0 },

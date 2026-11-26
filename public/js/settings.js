@@ -41,6 +41,8 @@ export const ACTIONS = [
   { id: 'fire', label: 'Fire', type: 'hold', wheel: true },
   { id: 'scope', label: 'Scope / zoom', type: 'press', wheel: true, modes: [['toggle', 'Toggle (cycles zoom)'], ['hold', 'Hold']] },
   { id: 'reload', label: 'Reload', type: 'press', wheel: true },
+  { id: 'primary', label: 'Primary weapon', type: 'press', wheel: true },
+  { id: 'melee', label: 'Knife (run faster)', type: 'press', wheel: true },
   { id: 'board', label: 'Party scoreboard', type: 'hold' },
 ];
 
@@ -55,6 +57,8 @@ export const DEFAULT_BINDS = {
   fire: ['Mouse0', null],
   scope: ['Mouse2', null],
   reload: ['KeyR', null],
+  primary: ['Digit1', null],
+  melee: ['Digit3', null],
   board: ['Tab', null],
 };
 

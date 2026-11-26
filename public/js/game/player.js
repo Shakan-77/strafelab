@@ -55,6 +55,7 @@ export const MOVE = {
   // AimPro's landing slow-down felt too strong: keep 60% of its dip (50% → 70% speed at worst)
   landSlowScale: 0.6,
   quietMult: 1.08, // × walk speed: above this, footsteps / jumps / landings are heard
+  refRunSpeed: 5.4, // accel and braking below are for this run speed (rifle) and scale with the weapon's
   accel: 20.8, // estimated ~0.26 s from standstill to rifle run speed
   brakeFriction: 3.77, // 1/s  } fitted so 5.4 m/s → 25% in ~110 ms, full stop in ~160 ms
   brakeDecel: 24.5, // m/s² }
@@ -378,6 +379,11 @@ export class Player {
       [vx, vz] = aimproAir(vx, vz, wx, wz, wishSpeed > 0, fx, sx, k, dt);
     } else if (this.onGround) {
       wishSpeed *= landSlow;
+      // acceleration and braking scale with the weapon's run speed (knife 1.25x, sniper 0.95x of the
+      // rifle), so every weapon reaches full speed and stops in the same time, as in AimPro's model
+      const kw = this.runSpeed / MOVE.refRunSpeed;
+      const accel = MOVE.accel * kw;
+      const decel = MOVE.brakeDecel * kw;
       if (wishSpeed > 0) {
         let along = inputAlignment;
         let px = vx - along * wx;
@@ -385,31 +391,31 @@ export class Player {
         // velocity that isn't in the new direction brakes on the same curve as a release
         const pl = Math.hypot(px, pz);
         if (pl > 0) {
-          const k = brake(pl, dt) / pl;
+          const k = brake(pl, dt, decel) / pl;
           px *= k;
           pz *= k;
         }
         if (along < 0) {
           // counter-strafe: brake harder than releasing until you stop, then accelerate
-          const decel = MOVE.brakeDecel + MOVE.counterExtra;
-          const stopTime = Math.log1p(-along * MOVE.brakeFriction / decel) / MOVE.brakeFriction;
-          along = stopTime >= dt ? -brake(-along, dt, decel) : Math.min(wishSpeed, MOVE.accel * (dt - stopTime));
+          const cdecel = (MOVE.brakeDecel + MOVE.counterExtra) * kw;
+          const stopTime = Math.log1p(-along * MOVE.brakeFriction / cdecel) / MOVE.brakeFriction;
+          along = stopTime >= dt ? -brake(-along, dt, cdecel) : Math.min(wishSpeed, accel * (dt - stopTime));
         } else if (along < wishSpeed) {
-          along = Math.min(wishSpeed, along + MOVE.accel * dt);
+          along = Math.min(wishSpeed, along + accel * dt);
         } else {
-          along = Math.max(wishSpeed, brake(along, dt)); // e.g. switching from run to walk
+          along = Math.max(wishSpeed, brake(along, dt, decel)); // e.g. switching from run to walk, or knife to rifle
         }
         vx = along * wx + px;
         vz = along * wz + pz;
         // Turn without gaining speed. A lower stance speed still takes time to reach.
         const speed = Math.hypot(vx, vz);
-        const cap = Math.max(wishSpeed, brake(speedBefore, dt));
+        const cap = Math.max(wishSpeed, brake(speedBefore, dt, decel));
         if (speed > cap) {
           vx *= cap / speed;
           vz *= cap / speed;
         }
       } else if (speedBefore > 0) {
-        const k = brake(speedBefore, dt) / speedBefore;
+        const k = brake(speedBefore, dt, decel) / speedBefore;
         vx *= k;
         vz *= k;
       }

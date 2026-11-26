@@ -251,6 +251,28 @@ The owner's second playtest found three problems: the jump was a bit too high, w
   | Walk jump on flat ground | Loud, as before |
   | Speed after a full jump | 5.4 → 4.14 m/s at 47 ms, 4.02 m/s at 0.1 to 0.2 s, 4.84 m/s at 0.4 s, back to 5.4 m/s at 0.5 s |
 
+### `outside-values-test`, fourth commit: weapon-scaled acceleration and a knife in every run
+
+- **Acceleration by weapon:** StrafeLab's ground acceleration and braking were fixed in m/s², so a faster weapon took longer to reach top speed and to stop. They now scale with the weapon's run speed (`MOVE.refRunSpeed` = 5.4), as AimPro's model does. Every weapon now reaches full speed in 258 ms, releases to a full stop in 164 ms, and counter-strafes to a stop in 117 ms. Time to the accuracy cutoff depends on the weapon's deadzone:
+
+  | Weapon | Top speed | Release to accurate | Counter-strafe to accurate |
+  | --- | --- | --- | --- |
+  | Knife | 6.75 m/s | 109 ms | 78 ms |
+  | Rifle | 5.4 m/s | 109 ms | 78 ms |
+  | Sniper | 5.13 m/s | 133 ms (15% deadzone) | 102 ms |
+
+  Before this, the knife took 328 ms to reach top speed and 195 ms to stop. Rifle values are unchanged. ADS and scoped speed multipliers still only cap your speed.
+- **Knife in every run:**
+  - **Binds:** two new actions, **Primary weapon** (`Digit1`) and **Knife (run faster)** (`Digit3`). They match Valorant's 1 and 3, can be rebound in Settings > Controls, and work on the wheel.
+  - **Swapping:** `game.switchWeapon(id)` swaps between the run's primary weapon (`game.primary`) and the knife. The speed limit and accuracy cutoff change at once. Swapping cancels any reload, unscopes, keeps each weapon's ammo (`ammoBy`), and rebuilds the viewmodel, which rises into view over the equip time.
+  - **Equip times:** you can't fire until the equip time (`weapon.equip`) has passed: rifle 1.0 s and sniper 1.5 s (wiki: Vandal, Operator), knife 0.6 s and precision gun 0.5 s (estimates).
+  - **Results:** they record `game.primary` as the weapon, and Restart reuses it, so a run finished with the knife out stays ranked. Drills whose weapon is already the knife (Air Course, Silent Jumps) ignore the swap.
+- **Verified** in the debug page:
+  - **Swapping in Counter-Strafe:** the knife drew in 0.6 s and ran at 6.75 m/s. Back on the rifle, a shot during the 1.0 s draw was blocked, and the next shot after the draw took ammo from the kept 24 rounds.
+  - **Finishing with the knife out:** the result recorded `weaponId: rifle` and stayed ranked.
+  - **Settings > Controls:** shows both new binds.
+- **Guide and README:** a new "Weapon swap" reference row, the acceleration row now covers every weapon, and a README controls note.
+
 - **What the first comparison said (before the user's decision):** the two models agree closely on ground stopping. They disagree on air control: AimPro is classic Quake/CS strafing, where turning with W does nothing, strafe plus mouse gains speed, and opposite keys only stop you. StrafeLab matches the user's own Valorant observations: W plus the camera steers, you gain no speed, and a 180° turn carries you about 0.5 m behind. Use the Valorant Range recording in [PLAN.md](PLAN.md) to decide each mechanic. Don't take either model on trust.
 
 ## Verification and open issues

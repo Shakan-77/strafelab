@@ -267,6 +267,12 @@ export class Game {
         case 'reload':
           this.startReload();
           break;
+        case 'primary':
+          this.switchWeapon(this.primary.id);
+          break;
+        case 'melee':
+          this.switchWeapon('knife');
+          break;
         case 'board':
           this.hud.showBoard(true);
           break;
@@ -297,6 +303,8 @@ export class Game {
       else if (a === 'fire') this.trigger(ts);
       else if (a === 'scope') this.cycleScope();
       else if (a === 'reload') this.startReload();
+      else if (a === 'primary') this.switchWeapon(this.primary.id);
+      else if (a === 'melee') this.switchWeapon('knife');
     }
   }
 
@@ -472,6 +480,7 @@ export class Game {
       [k('fire'), 'fire'],
       [k('scope'), this.modes.scope === 'hold' ? 'scope (hold)' : 'scope'],
       [k('reload'), 'reload'],
+      [`${k('primary')} / ${k('melee')}`, 'gun / knife'],
       [k('board'), 'party board'],
     ];
     document.querySelector('#overlay-pause .keys').replaceChildren(
@@ -500,6 +509,10 @@ export class Game {
     this.rng = new RNG(seed);
     // the player may pick a different gun (or the knife) before starting
     this.weapon = WEAPONS[opts.weapon] || WEAPONS[meta.weapon];
+    // every run also carries the knife: Primary / Knife binds swap between them
+    this.primary = this.weapon;
+    this.ammoBy = {};
+    this.equipT = 0;
     this.ammo = this.weapon.mag;
     this.reloadT = 0;
     this.fireCooldown = 0;
@@ -574,7 +587,7 @@ export class Game {
 
   restart() {
     if (this.party || !this.meta) return;
-    this.load(this.meta, this.difficulty, (Math.random() * 2 ** 31) >>> 0, { countdown: 3, weapon: this.weapon.id });
+    this.load(this.meta, this.difficulty, (Math.random() * 2 ** 31) >>> 0, { countdown: 3, weapon: this.primary.id });
     this.requestLock();
   }
 
@@ -609,7 +622,7 @@ export class Game {
     res.reason = reason;
     res.meta = this.meta;
     res.difficulty = this.difficulty;
-    res.weaponId = this.weapon.id;
+    res.weaponId = this.primary.id;
     res.party = this.party;
     if (document.pointerLockElement) document.exitPointerLock();
     this.locked = false;
@@ -716,6 +729,29 @@ export class Game {
     return this.zoom > 1 && this.weapon?.scope?.overlay !== false;
   }
 
+  /**
+   * Swap between the run's primary weapon and the knife (Valorant 1 / 3). Your speed limit changes
+   * at once; you can fire only after the new weapon's equip time. Each weapon keeps its own ammo,
+   * and a reload in progress is cancelled.
+   */
+  switchWeapon(id) {
+    const next = WEAPONS[id];
+    if (!next || next === this.weapon || this.state === 'finished' || this.state === 'idle') return;
+    this.ammoBy[this.weapon.id] = this.ammo;
+    this.reloadT = 0;
+    this.setZoom(0);
+    this.weapon = next;
+    this.ammo = this.ammoBy[id] ?? next.mag;
+    this.equipT = next.equip ?? 0;
+    this.shotIndex = 0;
+    this.recoil = 0;
+    this.player.runSpeed = next.runSpeed;
+    this.player.accurateSpeed = accurateSpeed(next);
+    this.hud.ammoEl.hidden = !Number.isFinite(next.mag) || !!next.noFire;
+    this.buildViewmodel();
+    this.audio.tone(next.id === 'knife' ? 1400 : 520, 0.06, { type: 'triangle', vol: 0.08 });
+  }
+
   cycleScope() {
     if (!this.weapon.scope || this.state !== 'running') return;
     if (this.fireCooldown > 0 && this.weapon.scope.unscopeOnFire) return; // bolt cycling
@@ -754,7 +790,7 @@ export class Game {
 
   tryFire(carry = 0, inputAt) {
     const w = this.weapon;
-    if (w.noFire || this.reloadT > 0) return;
+    if (w.noFire || this.reloadT > 0 || this.equipT > 0) return;
     if (w.id === 'precision') {
       // A rendered frame is not required between two legal taps.
       const at = inputAt ?? performance.now();
@@ -1055,6 +1091,7 @@ export class Game {
       // Carry sub-frame time into the next automatic shot to prevent cadence drift.
       const carry = this.fireCooldown > 0 ? Math.max(0, dt - this.fireCooldown) : 0;
       this.fireCooldown = Math.max(0, this.fireCooldown - dt);
+      this.equipT = Math.max(0, this.equipT - dt);
       this.timeSinceShot += dt;
       if (this.reloadT > 0) {
         this.reloadT -= dt;
@@ -1111,6 +1148,9 @@ export class Game {
     vm.position.x += Math.sin(motion.stride) * bob * 0.003 - motion.ads * 0.16;
     vm.position.y += Math.cos(2 * motion.stride) * bob * 0.004 + motion.ads * 0.07;
     vm.position.z += motion.kick * 0.05;
+    // drawing a weapon: it rises into view over the equip time
+    const eq = this.weapon.equip ? Math.min(1, this.equipT / this.weapon.equip) : 0;
+    vm.position.y -= eq * eq * 0.14;
   }
 
   updateHud(dt) {

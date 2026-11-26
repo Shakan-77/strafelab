@@ -70,6 +70,8 @@ Defaults: `WASD` move · `Shift` walk · `Left Ctrl`/`C` crouch · `Space` jump 
 
 Rebind everything in **Settings > Controls**. Each action has a primary and a secondary slot, and you can use any key, any mouse button (including the side buttons) or the wheel (for Jump, Fire, Scope and Reload). Walk and crouch can be hold or toggle, and scope can be toggle or hold. Esc is reserved for pausing.
 
+Every run also carries the knife. Press **3** (Knife) to draw it and run at 6.75 m/s, and **1** (Primary weapon) to switch back. Your speed changes the moment you swap. You can fire again once the gun is drawn: 1.0 s for the rifle, 1.5 s for the sniper. Each weapon keeps its own ammo. A run finished with the knife out still counts as a run with the drill's weapon.
+
 While a run is on screen, browser shortcuts are blocked: Ctrl+H, Ctrl+F, Ctrl+D, Ctrl+P, Ctrl+J, F5, the Alt menu, right-click menu, page zoom, and mouse back/forward. Chrome only lets a page capture Ctrl+W, Ctrl+T and Ctrl+N in fullscreen, so runs start in fullscreen with keyboard lock by default ("Play in fullscreen" in Controls). Hold Esc to leave fullscreen. If fullscreen is off, those shortcuts show a "Leave site?" prompt instead of closing the run.
 
 ## Project layout
