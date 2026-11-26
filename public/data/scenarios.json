@@ -1,7 +1,17 @@
 {
   "version": 1,
-  "difficulties": ["easy", "medium", "hard"],
-  "categories": ["Movement", "Precision", "Sniper", "Reaction", "Simulation"],
+  "difficulties": [
+    "easy",
+    "medium",
+    "hard"
+  ],
+  "categories": [
+    "Movement",
+    "Precision",
+    "Sniper",
+    "Reaction",
+    "Simulation"
+  ],
   "scenarios": [
     {
       "id": "counter-strafe",
@@ -296,6 +306,43 @@
         "Hold crouch before you reach the vent so you don't bump the ceiling.",
         "In the gallery, stop fully before every shot. Moving shots miss.",
         "Peek the final room with a quick swing. Every 0.45s you're exposed adds +2s."
+      ]
+    },
+    {
+      "id": "pre-aim",
+      "name": "Pre-aim Route",
+      "category": "Simulation",
+      "weapon": "rifle",
+      "duration": 0,
+      "timeLimit": 180,
+      "order": "asc",
+      "unit": "time",
+      "minScore": 5000,
+      "maxScore": 600000,
+      "short": "Clear a route of held angles with your crosshair already on the next head.",
+      "desc": "Walk a route through a corridor, a room and a site while enemies hold common angles: a tight corner, a head over a box, a deep angle and a raised platform. Which angles are held changes every run, so you have to check each one. Enemies shoot back after their reaction time, and dying costs 5 s and sends you back to the last cleared corner. The clock stops when the last enemy dies. Crosshair placement is measured at the moment each enemy comes into view.",
+      "tips": [
+        "Move your crosshair to the next angle before you round the corner, not after.",
+        "Clear one angle at a time. Slice the corner instead of walking into the open.",
+        "Keep it at head height. The accent strips on the corners mark it."
+      ]
+    },
+    {
+      "id": "anti-flash",
+      "name": "Anti-flash",
+      "category": "Reaction",
+      "weapon": "rifle",
+      "duration": 60,
+      "order": "desc",
+      "unit": "pts",
+      "minScore": 0,
+      "maxScore": 60000,
+      "short": "Turn away from the flash, turn back and win the swing.",
+      "desc": "You hold a gap. A flash is lobbed over the wall and an enemy swings right after it pops. Turn away before it pops (more than 100° from it, or with cover between you) and you are not blinded; look at it and the screen whites out. Then turn back and kill the swinger before their reaction timer fires. Harder levels pop faster and swing sooner, and mix in fake flashes with no swing and swings with no flash.",
+      "tips": [
+        "React to the throw sound and the orb, not the pop. Flick away the moment you see it.",
+        "Turn back as soon as it pops: the swing comes a fraction of a second later.",
+        "A half flash still hurts. Turn fully away, not just a little."
       ]
     }
   ]

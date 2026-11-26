@@ -1,6 +1,6 @@
 # StrafeLab: Valorant aim & movement trainer
 
-A browser-based 3D trainer for Valorant sensitivity, movement and aim practice. It has 16 drills, parties for training with friends, and a persistent leaderboard.
+A browser-based 3D trainer for Valorant sensitivity, movement and aim practice. It has 18 drills, parties for training with friends, and a persistent leaderboard.
 
 ## Run it
 
@@ -32,12 +32,14 @@ Options: `--port 9000`, `--host 127.0.0.1` (local only). By default the server l
 | Sniper | Sniper: Strafing Targets | Bolt-action, 2.5x/5x scope, vs ADAD strafers and doorway crossers. |
 | Reaction | Reaction Time | 12-trial visual reaction test. Hard adds go/no-go decoys. |
 | Reaction | Angle Hold | Hold a gap while enemies swing out and shoot back after their reaction time. |
+| Reaction | Anti-flash | Turn away from a flash before it pops, then turn back and win the swing that follows. |
 | Simulation | Peek Duels | 10 rounds: peek hidden angle-holders, counter-strafe and kill before they react. |
+| Simulation | Pre-aim Route | Clear a corridor, a room and a site where a different set of common angles is held each run. |
 | Simulation | Movement Course | Silent walk zone, crouch vent, box climb, shooting gate, held room. |
 
 Each drill has Easy, Medium and Hard, and each difficulty has its own leaderboard.
 
-Peek Duels, Angle Hold and Movement Course also score your **crosshair placement**: how far the crosshair was from the enemy's head at the moment they came into view, the share of enemies you had pre-aimed (within 2°), and whether you tend to hold too low or too high. It doesn't change the score or leaderboards.
+Peek Duels, Angle Hold, Pre-aim Route, Anti-flash and Movement Course also score your **crosshair placement**: how far the crosshair was from the enemy's head at the moment they came into view, the share of enemies you had pre-aimed (within 2°), and whether you tend to hold too low or too high. It doesn't change the score or leaderboards.
 
 ## System check
 

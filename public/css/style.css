@@ -440,3 +440,5 @@ input[type=range] { accent-color: var(--accent); }
   .lb-table th:nth-child(4), .lb-table td:nth-child(4) { display: none; }
   .big-score { font-size: 42px; }
 }
+/* Anti-flash drill: white-out while blinded (opacity driven per frame) */
+#game-root .flashbang { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5; }

@@ -19,7 +19,7 @@ The regular URL uses real browser mouse capture. Add `?debug=1` to bypass captur
 | Path | Responsibility |
 | --- | --- |
 | `server.py` | Static files, WebSockets, parties, score validation, and leaderboards. Scores persist in `data/leaderboard.json`. |
-| `public/data/scenarios.json` | Shared metadata for all 16 drills, including weapon, duration, difficulty options, and score bounds. |
+| `public/data/scenarios.json` | Shared metadata for all 18 drills, including weapon, duration, difficulty options, and score bounds. |
 | `public/js/main.js` and `public/js/settings.js` | Menus, settings, controls, the per-drill weapon picker, results, and per-drill practice history. Settings and history persist in the browser. |
 | `public/js/game/game.js` | Pointer lock, fullscreen, mouse look, fire timing, camera, simulation loop, and hit registration. |
 | `public/js/game/player.js` | Movement physics. All tuning constants are in the `MOVE` object at the top. Also handles jump and landing sound decisions and tagging. |
@@ -29,6 +29,7 @@ The regular URL uses real browser mouse capture. Add `?debug=1` to bypass captur
 | `public/js/inputprobe.js` | `InputProbe`: measures mouse event delivery and frame pacing. Counts stalls, spikes, hitches, event delay, and (when fed `pointerrawupdate`) the polling rate. Never changes aim. |
 | `public/js/syscheck.js` | The **System check** tab: an 8-second captured test that feeds `InputProbe` both `mousemove` and `pointerrawupdate`, then `assess()` turns the summary into rows and fixes. The last result persists in `strafelab.check.v1`. |
 | `public/js/guide.js` | In-game guide text and the reference numbers table. Each number is labelled `wiki` (VALORANT wiki or Riot patch notes) or `est` (StrafeLab estimate). |
+| `public/js/scenarios/tactics.js` | Pre-aim Route and Anti-flash drills. |
 | `public/js/scenarios/*.js` | One module per drill, registered in `index.js`. |
 
 ## Gameplay baseline
@@ -105,6 +106,19 @@ Ideas taken from looking at other browser Valorant trainers (valox.gg has a perf
 - **Side effects:** an ADAD reversal reaches zero speed in about 117 ms instead of 156 ms, and the time spent under the accuracy cutoff during a reversal drops from about 125 ms to about 109 ms. Bots use the same `counterExtra` (`targets.js`), so strafing bots reverse faster too and their dead points are a little shorter. Counter-Strafe Drill times-to-kill get a little faster, so new scores can be slightly higher than older leaderboard entries.
 - **Unchanged:** all air movement. The air checks give the same numbers before and after: W+D drift 0.30 m over 3.61 m, 180° flick or S lands 0.52 m behind take-off, A at take-off while flying right lands 0.52 m back, keys held lands 3.63 m out.
 - **Guide:** the counter-strafing text and the Rifle stop time row now say about 80 ms counter-strafing and about 106 ms release.
+
+### Pre-aim Route and Anti-flash (branch `system-check-placement`, uncommitted)
+
+The user pointed at [valox.gg](https://valox.gg) as a reference. It has no public repository: it is a closed-source, ad-supported site whose bundled JavaScript isn't licensed for reuse, so no code or values were taken from it. Its catalogue was used only to find what StrafeLab lacked. ValoX groups its 114 exercises as Pre-aim (83), Angle holding (11), Anti-flash (5) and pro-clip Scenarios (15), and also has an Exercise Studio, a Skill check and a Performance check. StrafeLab already had angle holding and, on this branch, a System check. The two missing training types were built as original drills on original geometry. ValoX's recreations of real Valorant maps and pro clips were not copied (Riot and player content).
+
+- **Pre-aim Route** (`pre-aim`, Simulation, time trial, `order: asc`, `unit: time`, `timeLimit` 180 s, score bounds 5000 to 600000 ms). The route runs through a corridor, a room, a second corridor and a site. It has 8 candidate angles in route order: a tight right corner out of the first corridor, a crouched enemy behind a crate, a deep angle behind a pillar, the end of the second corridor, the site's left wall edge, its right corner, a head over a 1.4 m box, and a 1.5 m platform. Easy holds 4 of them, Medium 6 and Hard all 8, chosen with the run's seeded RNG and kept in route order. Enemies are static `Bot`s using the shared `BotGun`: exposure builds while they can see you, and they fire after the reaction time. A death adds 5 s, restores 150 HP and respawns you at the `safe` point of the first living angle. The clock stops when the last enemy dies. Results: enemies cleared, deaths, damage taken, average seen-to-kill, headshot kills, accuracy, and crosshair placement (recorded on first sight, revealed after each kill). Corners you clear have head-height accent strips.
+- **Anti-flash** (`anti-flash`, Reaction, 60 s, points). The layout is the Angle Hold gap. Each round, a white orb is lobbed from behind one wall (with a throw sound) and pops above the gap after `popTime` (0.95 / 0.75 / 0.6 s by difficulty). At the pop, the angle between the camera direction and the orb sets the blind, if there is line of sight: under 60° gives a full blind for 1.8 s, 60 to 100° a partial blind (strength 1 down to 0.25) for 0.9 s, and more than that, or behind cover, none (+50 points, "dodged"). A full-screen `.flashbang` overlay shows the blind and fades over the last 0.6 s. The scenario creates it and removes it in `dispose()`. After the pop, a `peek` swinger comes from the flash side after `swingDelay` (0.55 to 0.8 / 0.35 to 0.6 / 0.2 to 0.45 s) and fires like Angle Hold. Medium and Hard mix in fake flashes (no swing, 10% / 20%) and dry swings (no flash, 10% / 15%). Scoring follows Angle Hold: a kill is 100, plus a speed bonus, plus 25 for a headshot. A death is -50 and a miss -5. Results: kills, deaths, flashes dodged, fully or half flashed, time blinded, average time to kill, accuracy and placement. The blind thresholds and timings are StrafeLab estimates, not Riot numbers.
+- **Guide:** new entries "Pre-aiming a route" and "Playing against flashes". README drill table updated. `scenarios.json` now lists 18 drills, so restart `server.py` after pulling.
+- **Verified** in the debug page by driving the game loop from a script with the pane hidden:
+  - **Pre-aim Route:** no enemy is visible from spawn, and each angle opens up from a point on the route. An exposed player is shot, takes the 5 s penalty and respawns. Killing all 8 on Hard stops the clock, and the score is time plus penalties.
+  - **Anti-flash:** looking at the gap gives a full blind (overlay opacity 1, 1.73 s left). Turning 180° dodges the flash. At 75° off it gives a partial blind (0.65). Turning back after the pop killed three swingers in a row.
+  - **Cleanup:** the overlay is gone after quitting.
+  - **Not checked:** neither drill has been played by hand yet.
 
 ### Sound rules in force (`player.js`)
 

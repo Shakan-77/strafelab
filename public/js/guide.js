@@ -73,6 +73,26 @@ export const GUIDE = [
     ],
   },
   {
+    title: 'Pre-aiming a route',
+    drill: 'pre-aim',
+    body: 'Pre-aiming means your crosshair is already on the spot where the next head will appear before you can see it, so the fight starts with a click instead of a flick. Pre-aim Route walks you through a corridor, a room and a site with a set of common angles: a tight corner, a head over a box, a deep angle and a raised platform. A different set of them is held each run, so you can\'t skip checks.',
+    points: [
+      'Move the crosshair to the next angle while you are still behind cover, then slice the corner slowly.',
+      'Clear angles one at a time, closest first. The tight corner right out of a doorway kills most players.',
+      'Watch the placement readout. Under 2° means you were pre-aimed.',
+    ],
+  },
+  {
+    title: 'Playing against flashes',
+    drill: 'anti-flash',
+    body: 'A flash only blinds you if you are looking toward it with line of sight when it pops. In StrafeLab it blinds fully within 60° of your view, partly up to 100°, and not at all beyond that or behind cover. The enemy who threw it usually swings straight after, so the skill is turning away on the throw, then turning back at the pop.',
+    points: [
+      'React to the throw (sound and orb), not the pop. By the pop it is too late.',
+      'Turn back the moment it pops. The swing comes 0.2 to 0.8 s later depending on difficulty.',
+      'Hard mode mixes in fake flashes with no swing, and swings with no flash.',
+    ],
+  },
+  {
     title: 'Silent jumps',
     drill: 'silent-jump',
     body: 'A jump can be heard twice: at take-off and on landing. The take-off is silent whenever you hold Walk or Crouch as you press jump, even straight out of a run. With neither, it\'s heard, even from a standstill. A landing is silent when you hold Walk or Crouch and land higher than you jumped from (you fall less than you rose), or when you barely fall at the end of your jump at walking speed. Crouching while you jump pulls your legs up, so you clear a ledge that a normal jump can\'t reach and land close to the top of your jump, a short and silent fall. Releasing crouch mid-air after a crouch-jump also lands silently at walking speed, even on flat ground.',
