@@ -109,7 +109,7 @@ Ideas taken from looking at other browser Valorant trainers (valox.gg has a perf
 - **Unchanged:** all air movement. The air checks give the same numbers before and after: W+D drift 0.30 m over 3.61 m, 180° flick or S lands 0.52 m behind take-off, A at take-off while flying right lands 0.52 m back, keys held lands 3.63 m out.
 - **Guide:** the counter-strafing text and the Rifle stop time row now say about 80 ms counter-strafing and about 106 ms release.
 
-### `f4dabbb`: Pre-aim Route and Anti-flash (branch `system-check-placement`)
+### Pre-aim Route and Anti-flash (`b4952d8` on `outside-values-test`, `f4dabbb` on local `system-check-placement`)
 
 The user pointed at [valox.gg](https://valox.gg) as a reference. It has no public repository: it is a closed-source, ad-supported site whose bundled JavaScript isn't licensed for reuse, so no code or values were taken from it. Its catalogue was used only to find what StrafeLab lacked. ValoX groups its 114 exercises as Pre-aim (83), Angle holding (11), Anti-flash (5) and pro-clip Scenarios (15), and also has an Exercise Studio, a Skill check and a Performance check. StrafeLab already had angle holding and, on this branch, a System check. The two missing training types were built as original drills on original geometry. ValoX's recreations of real Valorant maps and pro clips were not copied (Riot and player content).
 
@@ -151,8 +151,8 @@ In game scripts, set `__sl.net.send = () => false` so test runs don't reach the 
 | Branch | State | What's on it |
 | --- | --- | --- |
 | `main` | Pushed | Everything through `f6ab0ad`. |
-| `system-check-placement` | Pushed up to `37404d4`. `f4dabbb` exists only locally. | System check tab, crosshair-placement scoring, counter-strafe at about 80 ms, and Pre-aim Route and Anti-flash. The two commits from another Claude session list "Claude" as author and carry a Co-Authored-By trailer. Re-credit them to Shakan-77 before merging into `main` (see `CLAUDE.md`). |
-| `outside-values-test` | Local only, branched from `system-check-placement` | AimPro's jump, air steering and landing are now the default (user decision), with StrafeLab's ground movement and silent-jump rules kept. Read the next section before pushing or merging. |
+| `system-check-placement` | Pushed up to `37404d4`. `f4dabbb` exists only locally. | System check tab, crosshair-placement scoring, counter-strafe at about 80 ms, and Pre-aim Route and Anti-flash. The pushed commits `9e6c008` and `37404d4` still list Claude as author. Their re-credited copies live on `outside-values-test`, so use that branch, not this one, as the base for merging into `main`. |
+| `outside-values-test` | Local only. Contains everything on `system-check-placement`, re-credited: `ec0b607` and `f66ab16` replace the Claude-authored `9e6c008` and `37404d4`, with Shakan-77 as author and committer and the Claude trailers removed (same files and dates). | AimPro's jump, air steering and landing are the default (user decision), with StrafeLab's ground movement and silent-jump rules kept. Weapon-scaled acceleration and a knife in every run. Read the next section before pushing or merging. |
 
 ## `outside-values-test`: AimPro's movement numbers
 
@@ -274,6 +274,22 @@ The owner's second playtest found three problems: the jump was a bit too high, w
 - **Guide and README:** a new "Weapon swap" reference row, the acceleration row now covers every weapon, and a README controls note.
 
 - **What the first comparison said (before the user's decision):** the two models agree closely on ground stopping. They disagree on air control: AimPro is classic Quake/CS strafing, where turning with W does nothing, strafe plus mouse gains speed, and opposite keys only stop you. StrafeLab matches the user's own Valorant observations: W plus the camera steers, you gain no speed, and a 180° turn carries you about 0.5 m behind. Use the Valorant Range recording in [PLAN.md](PLAN.md) to decide each mechanic. Don't take either model on trust.
+
+### Re-credit (fifth change on `outside-values-test`)
+
+The owner asked for the commits made by another Claude session to be re-credited. `git filter-branch` over `main..outside-values-test` rewrote `9e6c008` and `37404d4` to Shakan-77 as author and committer, and removed their `Co-Authored-By: Claude …` and `Claude-Session:` lines. The rewritten history has the same file tree (checked) and the same commit dates. As a result, every commit on the branch has a new hash:
+
+| Commit | Old hash | New hash |
+| --- | --- | --- |
+| System check | `9e6c008` | `ec0b607` |
+| Counter-strafe | `37404d4` | `f66ab16` |
+| Pre-aim and Anti-flash | `f4dabbb` | `b4952d8` |
+| AimPro profile | `b53aaf1` | `c42ea3c` |
+| AimPro default | `d4845e4` | `2517564` |
+| Lower jump | `e3832ea` | `192e63c` |
+| Knife and acceleration | `71038d0` | `fb6cf42` |
+
+`origin/system-check-placement` still holds the old, Claude-credited `9e6c008` and `37404d4`. Replacing them on GitHub needs a force-push, which is the owner's decision.
 
 ## Verification and open issues
 
