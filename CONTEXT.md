@@ -1,6 +1,6 @@
 # StrafeLab context
 
-StrafeLab is a browser-based 3D aim and movement trainer for Valorant practice. The current use is local development and playtesting on Windows. The repository is [Shakan-77/strafelab](https://github.com/Shakan-77/strafelab). [Changes since `100862e`](#changes-since-100862e) records Shakan-77's gameplay changes through [`f641ec6`](https://github.com/Shakan-77/strafelab/commit/f641ec6). Every push should add its changes to that section.
+StrafeLab is a browser-based 3D aim and movement trainer for Valorant practice. The current use is local development and playtesting on Windows. The repository is [Shakan-77/strafelab](https://github.com/Shakan-77/strafelab). [Changes since `100862e`](#changes-since-100862e) records Shakan-77's gameplay changes through [`f641ec6`](https://github.com/Shakan-77/strafelab/commit/f641ec6). Every push should add its changes to that section. [Branches](#branches) lists unmerged work, and [PLAN.md](PLAN.md) has the plan for the movement numbers.
 
 ## Run locally
 
@@ -30,6 +30,8 @@ The regular URL uses real browser mouse capture. Add `?debug=1` to bypass captur
 | `public/js/syscheck.js` | The **System check** tab: an 8-second captured test that feeds `InputProbe` both `mousemove` and `pointerrawupdate`, then `assess()` turns the summary into rows and fixes. The last result persists in `strafelab.check.v1`. |
 | `public/js/guide.js` | In-game guide text and the reference numbers table. Each number is labelled `wiki` (VALORANT wiki or Riot patch notes) or `est` (StrafeLab estimate). |
 | `public/js/scenarios/tactics.js` | Pre-aim Route and Anti-flash drills. |
+| `public/js/game/physics-aimpro.js` | Branch `outside-values-test` only: the test-only AimPro movement profile (`?physics=aimpro`). |
+| `PLAN.md` | The plan for measuring and retuning movement, with the Valorant Range recording list. |
 | `public/js/scenarios/*.js` | One module per drill, registered in `index.js`. |
 
 ## Gameplay baseline
@@ -107,7 +109,7 @@ Ideas taken from looking at other browser Valorant trainers (valox.gg has a perf
 - **Unchanged:** all air movement. The air checks give the same numbers before and after: W+D drift 0.30 m over 3.61 m, 180° flick or S lands 0.52 m behind take-off, A at take-off while flying right lands 0.52 m back, keys held lands 3.63 m out.
 - **Guide:** the counter-strafing text and the Rifle stop time row now say about 80 ms counter-strafing and about 106 ms release.
 
-### Pre-aim Route and Anti-flash (branch `system-check-placement`, uncommitted)
+### `f4dabbb`: Pre-aim Route and Anti-flash (branch `system-check-placement`)
 
 The user pointed at [valox.gg](https://valox.gg) as a reference. It has no public repository: it is a closed-source, ad-supported site whose bundled JavaScript isn't licensed for reuse, so no code or values were taken from it. Its catalogue was used only to find what StrafeLab lacked. ValoX groups its 114 exercises as Pre-aim (83), Angle holding (11), Anti-flash (5) and pro-clip Scenarios (15), and also has an Exercise Studio, a Skill check and a Performance check. StrafeLab already had angle holding and, on this branch, a System check. The two missing training types were built as original drills on original geometry. ValoX's recreations of real Valorant maps and pro clips were not copied (Riot and player content).
 
@@ -143,6 +145,53 @@ Open `http://localhost:8787/?debug=1` and run a script in the console. Import `P
 | Walk jump on flat ground | Loud |
 
 In game scripts, set `__sl.net.send = () => false` so test runs don't reach the leaderboard.
+
+## Branches
+
+| Branch | State | What's on it |
+| --- | --- | --- |
+| `main` | Pushed | Everything through `f6ab0ad`. |
+| `system-check-placement` | Pushed up to `37404d4`. `f4dabbb` exists only locally. | System check tab, crosshair-placement scoring, counter-strafe at about 80 ms, and Pre-aim Route and Anti-flash. The two commits from another Claude session list "Claude" as author and carry a Co-Authored-By trailer. Re-credit them to Shakan-77 before merging into `main` (see `CLAUDE.md`). |
+| `outside-values-test` | Local only, branched from `system-check-placement` | A switchable movement profile using AimPro's numbers, for comparison only. Read the next section before pushing or merging. |
+
+## `outside-values-test`: AimPro's movement numbers as a test profile
+
+**Do not merge this branch into `main` and do not push it without the owner deciding to.** The numbers are not cleared for public use.
+
+- **Where the numbers come from:** the user asked to test the values used by AimPro ([aimpro.world](https://aimpro.world), the newer version of valox.gg). AimPro publishes no source and no license. The values were read from the GitHub repo [XDL0-0/miaozhun-offline](https://github.com/XDL0-0/miaozhun-offline). That repo redistributes a scraped copy of AimPro's client without permission. The values are in `upstream/aimpro-2026-11-05/client/aim-kernels/kernel-aimlab-42-12a05ce14b5d.js`, in the player movement config `LA`. They are AimPro's own tuning of Valorant, not Riot data. A second repo, [unkwsr/open-aim](https://github.com/unkwsr/open-aim), is MIT for its own code. However, it runs the same unlicensed game files, and its only movement file is a Jett dash/updraft tuning that it says comes from decompiled Valorant Blueprints. Nothing was taken from open-aim.
+- **What was taken:** only numbers. `public/js/game/physics-aimpro.js` is StrafeLab's own implementation of the model those numbers describe, with the source noted at the top of the file. No AimPro code was copied.
+- **How to try it:** open `http://localhost:8787/?physics=aimpro` (add `&debug=1` for scripted tests). Without the parameter the game runs StrafeLab's model, exactly as before. In scripts, set `player.model = 'aimpro'`. Bots keep StrafeLab's model. Runs with the test physics are never posted to the leaderboard or saved as a personal best. Results show a **TEST PHYSICS · AIMPRO (NOT RANKED)** badge.
+- **AimPro's model, in brief:**
+  - **Base values:** these are at knife speed (6.75 m/s) and scale with the weapon's run speed: accel 36.75 m/s², friction 4.75 /s with a floor of 9 m/s², and braking 30 m/s² when no key is held.
+  - **Ground step:** speed drops by `max(friction·v, frictionMin) + (no keys ? braking : 0)`, then the keys add `accel·dt`. Above the stance's maximum speed, the excess bleeds off at 13 m/s².
+  - **Stances (multipliers on the base values):**
+
+    | Stance | accel | friction | frictionMin | braking | max speed |
+    | --- | --- | --- | --- | --- | --- |
+    | Walk | 0.55 | 0.9 | 1.45 | 0.55 | 0.6 |
+    | Crouch | 0.5 | 1.55 | 1.55 | 1 | 0.35 |
+    | Air | 4 | 0 | 0 | 0 | 1.1 |
+
+  - **Jump:** apex 1.15 m over 0.675 s of air time, which gives a launch of 6.81 m/s and gravity of 20.19 m/s². A crouched jump launches at 97.5% speed.
+  - **Air:** Quake-style acceleration. It is `air accel × 0.45`, doubled below 0.25 m/s and halved when the keys point 150° or more from your path. Speed along your keys is capped at 0.75 m/s. With W plus A or D held, at 45 to 90° from your path, only the sideways part of the input counts.
+  - **Landing:** for 0.5 s after a fall of more than 0.05 m, speed is limited. The limit dips to 50% at 0.05 s and recovers by 0.5 s, scaled by how far you fell.
+- **Simulated comparison** (rifle, 128 Hz, same scripts as in "Verifying physics changes"):
+
+  | Test | StrafeLab | AimPro profile |
+  | --- | --- | --- |
+  | Standstill to 5.4 m/s | 258 ms | 422 ms (friction-limited approach) |
+  | Release: accurate / stopped | 109 / 164 ms | 102 / 148 ms |
+  | Counter-strafe: accurate / stopped | 78 / 117 ms | 86 / 133 ms |
+  | Walk / crouch / knife speed | 3.02 / 2.43 / 6.75 m/s | 3.24 / 1.89 / 6.75 m/s |
+  | Jump apex / air time | 0.91 m / 0.67 s | 1.12 m / 0.67 s |
+  | Running jump, W held | 3.63 m | 3.63 m |
+  | W+D, or D only, no mouse | 0.31 m sideways | 0.28 m / 0.50 m sideways |
+  | W held, 90° mouse turn | Path follows: 2.85 m sideways | Barely bends: 0.22 m sideways |
+  | D held, 90° mouse turn | 2.86 m sideways at 5.4 m/s | 3.29 m sideways, speeds up to 5.94 m/s |
+  | S right after take-off | Lands 0.6 m behind | Stops: lands 0.18 m ahead at 0.75 m/s |
+  | Running right, A right after take-off | Lands 0.6 m back | Stops: lands 0.18 m out at 0.75 m/s |
+
+- **What the comparison says:** the two models agree closely on ground stopping. They disagree on air control: AimPro is classic Quake/CS strafing, where turning with W does nothing, strafe plus mouse gains speed, and opposite keys only stop you. StrafeLab matches the user's own Valorant observations: W plus the camera steers, you gain no speed, and a 180° turn carries you about 0.5 m behind. Use the Valorant Range recording in [PLAN.md](PLAN.md) to decide each mechanic. Don't take either model on trust.
 
 ## Verification and open issues
 

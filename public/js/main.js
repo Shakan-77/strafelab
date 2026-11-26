@@ -6,6 +6,7 @@ import { AudioFX } from './audio.js';
 import { WEAPONS } from './game/weapons.js';
 import { GUIDE, NUMBERS } from './guide.js';
 import { SystemCheck } from './syscheck.js';
+import { PHYSICS } from './game/player.js';
 import { el, fmtScore, mean, timeAgo } from './util.js';
 import {
   loadSettings, saveSettings, clientId, edpi, cmPer360, parseCrosshairCode, crosshairToCode,
@@ -892,7 +893,9 @@ function onFinish(res) {
   const key = `${meta.id}:${res.difficulty}`;
   const runs = historyRuns(loadHistory(), key);
   const prev = bestRun(meta, runs);
-  const practice = !!res.weaponId && res.weaponId !== meta.weapon && !res.party;
+  // the test-only ?physics=aimpro profile never posts scores or PBs
+  const testPhysics = PHYSICS !== 'strafelab';
+  const practice = (!!res.weaponId && res.weaponId !== meta.weapon && !res.party) || testPhysics;
   const ranked = !res.dnf && !practice;
   const pb = ranked && (!prev || better(meta, res.score, prev.score));
   if (ranked) pushHistory(key, { score: res.score, ts: Date.now(), stats: statsObj(res.stats) });
@@ -920,7 +923,7 @@ function renderResults() {
   const meta = r.meta;
   const badges = [];
   if (r.dnf) badges.push(el('span', { class: 'badge bad' }, r.reason === 'timeout' ? 'TIME LIMIT REACHED' : 'NOT COMPLETED'));
-  if (r.practice) badges.push(el('span', { class: 'badge' }, `PRACTICE · ${WEAPONS[r.weaponId].name.toUpperCase()} (NOT RANKED)`));
+  if (r.practice) badges.push(el('span', { class: 'badge' }, PHYSICS !== 'strafelab' ? 'TEST PHYSICS · AIMPRO (NOT RANKED)' : `PRACTICE · ${WEAPONS[r.weaponId].name.toUpperCase()} (NOT RANKED)`));
   if (r.pb) badges.push(el('span', { class: 'badge good' }, r.prev ? 'NEW PERSONAL BEST' : 'FIRST RUN'));
   else if (r.prev && !r.dnf) badges.push(el('span', { class: 'badge' }, `PB ${fmtScore(meta, r.prev.score)}`));
   if (r.rank) badges.push(el('span', { class: 'badge accent' }, r.improved ? `GLOBAL #${r.rank}` : `YOUR BEST: GLOBAL #${r.rank}`));

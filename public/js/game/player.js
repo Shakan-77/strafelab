@@ -1,5 +1,18 @@
 import * as THREE from 'three';
 import { clamp } from '../util.js';
+import { AIMPRO, AIMPRO_GRAVITY, AIMPRO_LAUNCH, aimproAir, aimproGround, aimproLandSlow } from './physics-aimpro.js';
+
+/**
+ * Which movement model to run. 'strafelab' is ours; 'aimpro' is the test-only profile from
+ * physics-aimpro.js (branch outside-values-test), picked with ?physics=aimpro.
+ */
+export const PHYSICS = (() => {
+  try {
+    return new URLSearchParams(globalThis.location?.search || '').get('physics') === 'aimpro' ? 'aimpro' : 'strafelab';
+  } catch {
+    return 'strafelab';
+  }
+})();
 
 /**
  * Movement tuned to feel like Valorant (metres and seconds):
@@ -90,6 +103,13 @@ export class Player {
     this.stepAcc = 0;
     this.stop = null;
     this.onEvent = () => {};
+    this.model = PHYSICS;
+    this.sinceLand = 9;
+    this.lastFall = 0;
+  }
+
+  get gravity() {
+    return this.model === 'aimpro' ? AIMPRO_GRAVITY : MOVE.gravity;
   }
 
   reset(pos, runSpeed, accurateSpeed) {
@@ -283,8 +303,9 @@ export class Player {
     if (this.jumpBuffer > 0) this.jumpBuffer -= dt;
     if (this.landPenalty > 0) this.landPenalty -= dt;
     if (this.tagT > 0) this.tagT -= dt;
+    this.sinceLand += dt;
     if (this.onGround && this.jumpBuffer > 0 && !locked && this.allowJump) {
-      this.vel.y = MOVE.jumpVel;
+      this.vel.y = this.model === 'aimpro' ? AIMPRO_LAUNCH * (this.crouched ? AIMPRO.jump.crouchHop : 1) : MOVE.jumpVel;
       this.onGround = false;
       this.jumpBuffer = 0;
       this.uncrouchedMidAir = false;
@@ -302,7 +323,16 @@ export class Player {
       if (this.crouched) this.tuck(world);
     }
 
-    if (this.onGround) {
+    if (this.model === 'aimpro') {
+      // test-only AimPro profile (physics-aimpro.js): weapon speed scales the knife-speed base values
+      const k = (this.runSpeed * this.speedMult * this.tagMult()) / AIMPRO.base.maxSpeed;
+      if (this.onGround) {
+        const stance = this.crouched ? 'crouch' : inp.walk ? 'walk' : 'run';
+        [vx, vz] = aimproGround(vx, vz, wx, wz, wishSpeed > 0, stance, k, dt, aimproLandSlow(this.sinceLand, this.lastFall));
+      } else {
+        [vx, vz] = aimproAir(vx, vz, wx, wz, wishSpeed > 0, fx, sx, k, dt);
+      }
+    } else if (this.onGround) {
       if (wishSpeed > 0) {
         let along = inputAlignment;
         let px = vx - along * wx;
@@ -410,7 +440,7 @@ export class Player {
     }
     this.vel.x = vx;
     this.vel.z = vz;
-    this.vel.y -= MOVE.gravity * dt;
+    this.vel.y -= this.gravity * dt;
     if (!this.onGround) this.airYaw = yaw;
 
     const wasGround = this.onGround;
@@ -436,10 +466,12 @@ export class Player {
       const ledgeLand = (!!inp.walk || this.crouched) && this.takeoffY !== undefined && this.pos.y > this.takeoffY + 0.02;
       // VALORANT: every gun is +7° inaccurate for 0.225 s after landing (ignore tiny step-offs)
       if (this.airTime > 0.1) this.landPenalty = 0.225;
+      this.sinceLand = 0;
+      this.lastFall = (vy * vy) / (2 * this.gravity);
       this.onEvent('land', {
         speed: vy,
         hspeed: hBefore,
-        fall: (vy * vy) / (2 * MOVE.gravity), // equivalent free-fall height
+        fall: (vy * vy) / (2 * this.gravity), // equivalent free-fall height
         airTime: this.airTime,
         tucked: wasTucked,
         crouched: this.crouched,
