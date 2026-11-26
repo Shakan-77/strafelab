@@ -666,7 +666,8 @@ export class SilentJumps extends TimeTrial {
   constructor(...a) {
     super(...a);
     this.noiseFeedback = true;
-    this.base = this.d({ easy: 0.98, medium: 1.04, hard: 1.1 });
+    // above a normal jump (feet apex ~1.12 m), below a crouch-jump (~1.37 m with the 0.25 m tuck)
+    this.base = this.d({ easy: 1.17, medium: 1.22, hard: 1.27 });
     this.count = 6;
     this.ledgeZ = [];
     this.landings = 0;
@@ -686,7 +687,7 @@ export class SilentJumps extends TimeTrial {
     const vary = [0, 0.03, -0.02, 0.04, 0.01, 0.03];
     let z = -6;
     for (let i = 0; i < this.count; i++) {
-      const h = Math.min(1.13, this.base + vary[i]);
+      const h = Math.min(1.31, this.base + vary[i]);
       this.ledgeZ.push(z);
       w.box([-W, 0, z - 3], [W, h, z], { mat: 'platform' });
       for (let s = 1; s <= 3; s++) w.box([-W, 0, z - 3 - 0.9 * s], [W, h * (1 - s / 4), z - 3 - 0.9 * (s - 1)], { mat: 'cover' });
@@ -738,7 +739,7 @@ export class SilentJumps extends TimeTrial {
       if (!d.loud) {
         this.silent += 1;
       } else {
-        if (d.speed > MOVE.silentLandVy) this.loudHard += 1;
+        if (d.speed > this.player.silentLandVy) this.loudHard += 1;
         else this.loudFast += 1;
         if (inZone) this.addPenalty(2, 'LANDING HEARD');
       }

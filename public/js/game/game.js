@@ -954,7 +954,7 @@ export class Game {
       if (data.loud) this.audio.land();
       if (explain && data.airTime > 0.1) {
         if (!data.loud) this.hud.feedback(`SILENT LANDING · ${data.fall.toFixed(2)} m fall`, 'good', 0.9);
-        else if (data.speed > MOVE.silentLandVy) this.hud.feedback(`LOUD LANDING · fell ${data.fall.toFixed(2)} m`, 'bad', 1.1);
+        else if (data.speed > this.player.silentLandVy) this.hud.feedback(`LOUD LANDING · fell ${data.fall.toFixed(2)} m`, 'bad', 1.1);
         else this.hud.feedback(`LOUD LANDING · moving ${data.hspeed.toFixed(1)} m/s (walk!)`, 'bad', 1.1);
       }
     }

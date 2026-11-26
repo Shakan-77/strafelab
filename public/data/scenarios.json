@@ -258,11 +258,11 @@
       "minScore": 4000,
       "maxScore": 600000,
       "short": "Time trial over gaps. Curve mid-air around walls to land.",
-      "desc": "A platform time trial with the knife out. Run before take-off to carry speed into the jump. Some landings sit behind walls, so hold a movement key and turn smoothly in the air to curve around them.",
+      "desc": "A platform time trial with the knife out. Run before take-off to carry speed into the jump. Some landings sit behind walls, so curve around them in the air: hold the strafe key on the side you're turning to and sweep the mouse smoothly. Turning with only W held barely bends your path.",
       "tips": [
-        "To curve right, hold W or D and sweep the mouse right.",
+        "To curve right, release W, hold D and sweep the mouse right.",
         "Before a curve, run along the orange stripe (the inside line) and jump at the very edge.",
-        "Start the turn as you leave the runway. With all movement keys released, looking around leaves your path unchanged.",
+        "Start the turn as you leave the runway. With all movement keys released, looking around leaves your path unchanged. Landing slows you briefly, so land early on a runway.",
         "Falling sends you back to the last checkpoint with a +2s penalty."
       ]
     },

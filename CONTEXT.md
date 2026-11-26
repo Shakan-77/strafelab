@@ -152,15 +152,23 @@ In game scripts, set `__sl.net.send = () => false` so test runs don't reach the 
 | --- | --- | --- |
 | `main` | Pushed | Everything through `f6ab0ad`. |
 | `system-check-placement` | Pushed up to `37404d4`. `f4dabbb` exists only locally. | System check tab, crosshair-placement scoring, counter-strafe at about 80 ms, and Pre-aim Route and Anti-flash. The two commits from another Claude session list "Claude" as author and carry a Co-Authored-By trailer. Re-credit them to Shakan-77 before merging into `main` (see `CLAUDE.md`). |
-| `outside-values-test` | Local only, branched from `system-check-placement` | A switchable movement profile using AimPro's numbers, for comparison only. Read the next section before pushing or merging. |
+| `outside-values-test` | Local only, branched from `system-check-placement` | AimPro's jump, air steering and landing are now the default (user decision), with StrafeLab's ground movement and silent-jump rules kept. Read the next section before pushing or merging. |
 
-## `outside-values-test`: AimPro's movement numbers as a test profile
+## `outside-values-test`: AimPro's movement numbers
 
 **Do not merge this branch into `main` and do not push it without the owner deciding to.** The numbers are not cleared for public use.
 
 - **Where the numbers come from:** the user asked to test the values used by AimPro ([aimpro.world](https://aimpro.world), the newer version of valox.gg). AimPro publishes no source and no license. The values were read from the GitHub repo [XDL0-0/miaozhun-offline](https://github.com/XDL0-0/miaozhun-offline). That repo redistributes a scraped copy of AimPro's client without permission. The values are in `upstream/aimpro-2026-11-05/client/aim-kernels/kernel-aimlab-42-12a05ce14b5d.js`, in the player movement config `LA`. They are AimPro's own tuning of Valorant, not Riot data. A second repo, [unkwsr/open-aim](https://github.com/unkwsr/open-aim), is MIT for its own code. However, it runs the same unlicensed game files, and its only movement file is a Jett dash/updraft tuning that it says comes from decompiled Valorant Blueprints. Nothing was taken from open-aim.
 - **What was taken:** only numbers. `public/js/game/physics-aimpro.js` is StrafeLab's own implementation of the model those numbers describe, with the source noted at the top of the file. No AimPro code was copied.
-- **How to try it:** open `http://localhost:8787/?physics=aimpro` (add `&debug=1` for scripted tests). Without the parameter the game runs StrafeLab's model, exactly as before. In scripts, set `player.model = 'aimpro'`. Bots keep StrafeLab's model. Runs with the test physics are never posted to the leaderboard or saved as a personal best. Results show a **TEST PHYSICS · AIMPRO (NOT RANKED)** badge.
+- **Physics modes** (`?physics=`, or `player.model` in scripts). Bots always use StrafeLab's model.
+
+  | Mode | Ground | Jump, air, landing | Ranked |
+  | --- | --- | --- | --- |
+  | default (`strafelab`) | StrafeLab | AimPro | Yes |
+  | `classic` | StrafeLab | StrafeLab's previous model | No |
+  | `aimpro` | AimPro | AimPro | No |
+
+  Unranked runs are never posted to the leaderboard or saved as a personal best, and results show a **TEST PHYSICS · CLASSIC / AIMPRO (NOT RANKED)** badge.
 - **AimPro's model, in brief:**
   - **Base values:** these are at knife speed (6.75 m/s) and scale with the weapon's run speed: accel 36.75 m/s², friction 4.75 /s with a floor of 9 m/s², and braking 30 m/s² when no key is held.
   - **Ground step:** speed drops by `max(friction·v, frictionMin) + (no keys ? braking : 0)`, then the keys add `accel·dt`. Above the stance's maximum speed, the excess bleeds off at 13 m/s².
@@ -191,7 +199,38 @@ In game scripts, set `__sl.net.send = () => false` so test runs don't reach the 
   | S right after take-off | Lands 0.6 m behind | Stops: lands 0.18 m ahead at 0.75 m/s |
   | Running right, A right after take-off | Lands 0.6 m back | Stops: lands 0.18 m out at 0.75 m/s |
 
-- **What the comparison says:** the two models agree closely on ground stopping. They disagree on air control: AimPro is classic Quake/CS strafing, where turning with W does nothing, strafe plus mouse gains speed, and opposite keys only stop you. StrafeLab matches the user's own Valorant observations: W plus the camera steers, you gain no speed, and a 180° turn carries you about 0.5 m behind. Use the Valorant Range recording in [PLAN.md](PLAN.md) to decide each mechanic. Don't take either model on trust.
+### `outside-values-test`, second commit: AimPro jump and air steering become the default
+
+The user played both models (default vs `?physics=aimpro`) and judged AimPro's **jumping and air steering closer to Valorant**. They judged StrafeLab's **silent-jump mechanics better**, so those stay.
+
+- **`player.js`:**
+  - **Model switches:** two getters, `airModel` and `groundModel`, decide which parts of each model run. The default runs AimPro's launch speed (6.81 m/s, ×0.975 crouched), gravity (20.19 m/s²), air step and landing slow-down, on StrafeLab's ground step.
+  - **Ground step unchanged:** releasing gets you accurate in 109 ms and counter-strafing in 78 ms, as before.
+  - **Landing slow-down:** it caps your wish speed on the ground for 0.5 s after a fall of more than 0.05 m. After a full jump it dips to 50% at about 0.05 s.
+  - **Previous air model:** still available as `?physics=classic`.
+- **Silent-jump rules are unchanged.** That covers Walk or Crouch silencing the take-off, `ledgeLand`, `crouchRelease`, the quiet speed and the 0.25 m crouch-jump tuck. The loud-landing threshold is now a fall height (`MOVE.silentLandFall` = 0.31 m) instead of an impact speed, so it means the same drop at the new gravity. `player.silentLandVy` gives the matching speed, and `game.js` and the Silent Jumps drill use it.
+- **Silent Jumps drill:** the ledges are now 1.17 / 1.22 / 1.27 m (easy, medium, hard), capped at 1.31 m. A normal jump (1.12 m) no longer clears them, and a crouch-jump (1.32 to 1.37 m) does.
+- **Guide and drill text:**
+  - The Air strafing guide and the Air Course description and tips now say to steer with the strafe key plus the mouse.
+  - The reference numbers table now gives a 1.15 m jump, 1.37 m crouch-jump reach, the 0.75 m/s air cap, and a new Landing slow row, labelled as AimPro's model.
+- **Verified by simulation:**
+
+  | Check | Result |
+  | --- | --- |
+  | Standing or running jump | 1.12 m apex, 3.63 m running jump (4.54 m with the knife) |
+  | W+D, no mouse | 0.28 m sideways |
+  | W, 90° mouse turn | 0.22 m sideways |
+  | D, 90° mouse turn | 3.29 m sideways, speeds up to 5.94 m/s |
+  | S in the air | Stops at 0.75 m/s |
+  | Speed after a full jump | 5.4 → 2.75 m/s at 0.1 s, back to 5.4 m/s at 0.5 s |
+  | Silent jumps | Plain jump fails a 1.17 m ledge. Crouch-jump lands silently on 1.17 and 1.31 m ledges. Crouch-release on flat ground is silent. Walk jump on flat ground is loud. Take-off with Walk or Crouch is silent. |
+  | Air Course curves (knife, swept over keys, sweep rate and start delay) | Reachable on every difficulty: 33, 30 and 24 of 180 strategies succeed on easy, medium and hard (classic: 78, 55 and 14). The ones that work hold the strafe key while sweeping. |
+  | Air Course hard straight gap (4.1 m after a 4 m runway) | Made when the previous jump lands within about 1 m of the runway's start (a normal landing is about 0.4 m in). Landing 2 m in leaves too little runway after the slow-down (take-off 5.41 m/s). |
+
+- **Leaderboards:** Air Course and Silent Jumps times set under the old physics aren't directly comparable. Nothing was reset.
+- **Not checked yet:** a hand playtest of the new default, especially Air Course on Hard and Silent Jumps.
+
+- **What the first comparison said (before the user's decision):** the two models agree closely on ground stopping. They disagree on air control: AimPro is classic Quake/CS strafing, where turning with W does nothing, strafe plus mouse gains speed, and opposite keys only stop you. StrafeLab matches the user's own Valorant observations: W plus the camera steers, you gain no speed, and a 180° turn carries you about 0.5 m behind. Use the Valorant Range recording in [PLAN.md](PLAN.md) to decide each mechanic. Don't take either model on trust.
 
 ## Verification and open issues
 

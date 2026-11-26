@@ -893,7 +893,7 @@ function onFinish(res) {
   const key = `${meta.id}:${res.difficulty}`;
   const runs = historyRuns(loadHistory(), key);
   const prev = bestRun(meta, runs);
-  // the test-only ?physics=aimpro profile never posts scores or PBs
+  // the comparison profiles (?physics=classic / aimpro) never post scores or PBs
   const testPhysics = PHYSICS !== 'strafelab';
   const practice = (!!res.weaponId && res.weaponId !== meta.weapon && !res.party) || testPhysics;
   const ranked = !res.dnf && !practice;
@@ -923,7 +923,7 @@ function renderResults() {
   const meta = r.meta;
   const badges = [];
   if (r.dnf) badges.push(el('span', { class: 'badge bad' }, r.reason === 'timeout' ? 'TIME LIMIT REACHED' : 'NOT COMPLETED'));
-  if (r.practice) badges.push(el('span', { class: 'badge' }, PHYSICS !== 'strafelab' ? 'TEST PHYSICS · AIMPRO (NOT RANKED)' : `PRACTICE · ${WEAPONS[r.weaponId].name.toUpperCase()} (NOT RANKED)`));
+  if (r.practice) badges.push(el('span', { class: 'badge' }, PHYSICS !== 'strafelab' ? `TEST PHYSICS · ${PHYSICS.toUpperCase()} (NOT RANKED)` : `PRACTICE · ${WEAPONS[r.weaponId].name.toUpperCase()} (NOT RANKED)`));
   if (r.pb) badges.push(el('span', { class: 'badge good' }, r.prev ? 'NEW PERSONAL BEST' : 'FIRST RUN'));
   else if (r.prev && !r.dnf) badges.push(el('span', { class: 'badge' }, `PB ${fmtScore(meta, r.prev.score)}`));
   if (r.rank) badges.push(el('span', { class: 'badge accent' }, r.improved ? `GLOBAL #${r.rank}` : `YOUR BEST: GLOBAL #${r.rank}`));

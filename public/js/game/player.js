@@ -3,12 +3,18 @@ import { clamp } from '../util.js';
 import { AIMPRO, AIMPRO_GRAVITY, AIMPRO_LAUNCH, aimproAir, aimproGround, aimproLandSlow } from './physics-aimpro.js';
 
 /**
- * Which movement model to run. 'strafelab' is ours; 'aimpro' is the test-only profile from
- * physics-aimpro.js (branch outside-values-test), picked with ?physics=aimpro.
+ * Which movement model to run (?physics=...):
+ * - 'strafelab' (default): StrafeLab's ground movement and silent-jump rules, with AimPro's jump,
+ *   air steering and landing slow-down (physics-aimpro.js). The user compared both in play and found
+ *   AimPro's jumping and air steering closer to Valorant.
+ * - 'classic': StrafeLab's previous air model (camera-follow steering, mid-air reversal), for comparison.
+ * - 'aimpro': AimPro's full model, ground included, for comparison.
+ * Only the default is ranked.
  */
 export const PHYSICS = (() => {
   try {
-    return new URLSearchParams(globalThis.location?.search || '').get('physics') === 'aimpro' ? 'aimpro' : 'strafelab';
+    const p = new URLSearchParams(globalThis.location?.search || '').get('physics');
+    return p === 'aimpro' || p === 'classic' ? p : 'strafelab';
   } catch {
     return 'strafelab';
   }
@@ -22,14 +28,14 @@ export const PHYSICS = (() => {
  *   comes to rest in ~160 ms. Pressing the opposite key crosses it in ~78 ms (10 ticks), matching
  *   Range footage of a Radiant player with 0.00° movement error 83 ms after the opposite key.
  *   Unreal-style braking: dv/dt = -(brakeFriction·v + brakeDecel)
- * - jump apex ~0.93 m, ~0.67 s air time [estimates]
- * - air strafing: holding the strafe key toward your mouse turn bends your path to follow your
- *   view (like CS), but turning never costs speed (unlike CS), and you can't gain speed: air
- *   running jumps keep their take-off speed. Slow jumps have limited control up to 1.8 m/s.
- *   Reversing mid-air (S, or W after turning around) pushes you back hard: a full-speed jump with
- *   an immediate 180° lands ~0.5 m behind the take-off point, as in Valorant.
+ * - jump, air and landing (default since branch outside-values-test, from AimPro's model in
+ *   physics-aimpro.js): apex ~1.15 m over ~0.675 s; Quake-style air control where you steer with a
+ *   strafe key plus the mouse (W alone barely bends your path), speed along your keys capped at
+ *   0.75 m/s, half accel when pushing against your path; a speed dip for 0.5 s after landing.
+ *   ?physics=classic restores StrafeLab's previous air model (camera-follow steering, mid-air
+ *   reversal that carries you ~0.5 m behind take-off), below in the `classic` branch of step().
  * - crouch-jump: crouching in the air (or jumping while crouched) tucks your legs up, so your
- *   feet clear ledges a normal jump can't (~1.18 m instead of ~0.93 m)
+ *   feet clear ledges a normal jump can't (~1.37 m instead of ~1.12 m)
  * - one "quiet speed" (just above walking speed): faster than it, footsteps start
  * - silent jump: the take-off is silent whenever Walk or Crouch is held (at any speed); otherwise heard
  * - silent landing: landing makes noise if you hit the ground hard (fell more than ~0.3 m from
@@ -40,7 +46,7 @@ export const MOVE = {
   tagSlow: 0.725, // patch 3.0
   tagTime: 0.5, // estimate
   tuckLift: 0.25,
-  silentLandVy: 3.2,
+  silentLandFall: 0.31, // m: a landing that fell further than this is heard (3.2 m/s impact at g = 16.5)
   quietMult: 1.08, // × walk speed: above this, footsteps / jumps / landings are heard
   accel: 20.8, // estimated ~0.26 s from standstill to rifle run speed
   brakeFriction: 3.77, // 1/s  } fitted so 5.4 m/s → 25% in ~110 ms, full stop in ~160 ms
@@ -108,8 +114,23 @@ export class Player {
     this.lastFall = 0;
   }
 
+  /** Jump, air and landing model: AimPro's unless running 'classic'. */
+  get airModel() {
+    return this.model === 'classic' ? 'strafelab' : 'aimpro';
+  }
+
+  /** Ground model: StrafeLab's unless running the full 'aimpro' profile. */
+  get groundModel() {
+    return this.model === 'aimpro' ? 'aimpro' : 'strafelab';
+  }
+
   get gravity() {
-    return this.model === 'aimpro' ? AIMPRO_GRAVITY : MOVE.gravity;
+    return this.airModel === 'aimpro' ? AIMPRO_GRAVITY : MOVE.gravity;
+  }
+
+  /** Impact speed above which a landing is heard: a fall of more than silentLandFall at this gravity. */
+  get silentLandVy() {
+    return Math.sqrt(2 * this.gravity * MOVE.silentLandFall);
   }
 
   reset(pos, runSpeed, accurateSpeed) {
@@ -163,7 +184,7 @@ export class Player {
 
   /** Would this landing be heard? Hard impact or faster than the quiet speed = loud. */
   isLoudLanding(vy, h) {
-    return vy > MOVE.silentLandVy || h > this.quietSpeed;
+    return vy > this.silentLandVy || h > this.quietSpeed;
   }
 
   /** Would this take-off be heard? Holding Walk or Crouch silences it, whatever your speed. */
@@ -305,7 +326,7 @@ export class Player {
     if (this.tagT > 0) this.tagT -= dt;
     this.sinceLand += dt;
     if (this.onGround && this.jumpBuffer > 0 && !locked && this.allowJump) {
-      this.vel.y = this.model === 'aimpro' ? AIMPRO_LAUNCH * (this.crouched ? AIMPRO.jump.crouchHop : 1) : MOVE.jumpVel;
+      this.vel.y = this.airModel === 'aimpro' ? AIMPRO_LAUNCH * (this.crouched ? AIMPRO.jump.crouchHop : 1) : MOVE.jumpVel;
       this.onGround = false;
       this.jumpBuffer = 0;
       this.uncrouchedMidAir = false;
@@ -323,16 +344,17 @@ export class Player {
       if (this.crouched) this.tuck(world);
     }
 
-    if (this.model === 'aimpro') {
-      // test-only AimPro profile (physics-aimpro.js): weapon speed scales the knife-speed base values
-      const k = (this.runSpeed * this.speedMult * this.tagMult()) / AIMPRO.base.maxSpeed;
-      if (this.onGround) {
-        const stance = this.crouched ? 'crouch' : inp.walk ? 'walk' : 'run';
-        [vx, vz] = aimproGround(vx, vz, wx, wz, wishSpeed > 0, stance, k, dt, aimproLandSlow(this.sinceLand, this.lastFall));
-      } else {
-        [vx, vz] = aimproAir(vx, vz, wx, wz, wishSpeed > 0, fx, sx, k, dt);
-      }
+    // AimPro's model (physics-aimpro.js): weapon speed scales its knife-speed base values
+    const k = (this.runSpeed * this.speedMult * this.tagMult()) / AIMPRO.base.maxSpeed;
+    // speed dip for half a second after landing (AimPro air model)
+    const landSlow = this.airModel === 'aimpro' ? aimproLandSlow(this.sinceLand, this.lastFall) : 1;
+    if (this.onGround && this.groundModel === 'aimpro') {
+      const stance = this.crouched ? 'crouch' : inp.walk ? 'walk' : 'run';
+      [vx, vz] = aimproGround(vx, vz, wx, wz, wishSpeed > 0, stance, k, dt, landSlow);
+    } else if (!this.onGround && this.airModel === 'aimpro') {
+      [vx, vz] = aimproAir(vx, vz, wx, wz, wishSpeed > 0, fx, sx, k, dt);
     } else if (this.onGround) {
+      wishSpeed *= landSlow;
       if (wishSpeed > 0) {
         let along = inputAlignment;
         let px = vx - along * wx;

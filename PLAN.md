@@ -9,7 +9,7 @@ StrafeLab's movement numbers are partly measured and partly estimated. This plan
 | VALORANT wiki and Riot patch notes | Run speeds, accuracy cutoffs, spread, landing penalty, tagging | Yes (already in) |
 | User's descriptions of Valorant | Air drift of about 1/12 of the jump with keys only, a 180° turn landing about 0.5 m behind, silent-jump rules | Yes (already in) |
 | Radiant movement guide video (frame-by-frame key overlay) | Rifle accurate 83 ms after the opposite key, and the A key pulling a jump peek back | Yes. The 80 ms counter-strafe is on `system-check-placement` |
-| AimPro numbers (scraped client, no license) | A full ground, air, jump and landing model | **No.** Only as a test profile on the local branch `outside-values-test` |
+| AimPro numbers (scraped client, no license) | A full ground, air, jump and landing model | Owner's call. On the local branch `outside-values-test`, AimPro's jump, air steering and landing are the default (the user judged them closer to Valorant), while StrafeLab keeps its ground movement and silent-jump rules |
 
 ## Steps
 
@@ -18,11 +18,11 @@ StrafeLab's movement numbers are partly measured and partly estimated. This plan
    - Time each mechanic from the key press shown on the overlay to the game's response: the Shooting Error graph, the view moving past floor lines, landing.
    - Use the cleanest repeat as the physics limit. Set aside repeats where technique, not physics, explains the result, and say which ones and why. The player's technique may not be optimal, and that must not end up in the physics.
 3. **Run both models through the same tests** in the debug page (`player.model = 'strafelab'` or `'aimpro'`) and put three columns side by side: Valorant, StrafeLab and the AimPro profile.
-4. **Decide mechanic by mechanic** what to change in StrafeLab's own model: acceleration, stopping, counter-strafe, walk and crouch speeds, jump height and arc, air steering, mid-air reversal, landing slow-down and crouch-jump. Retune using the Valorant measurements. The AimPro numbers are only a comparison and are never copied in.
+4. **Decide mechanic by mechanic** (jump and air steering are already decided in AimPro's favour by the user's playtest; the recording should confirm or refine them) what to change in StrafeLab's own model: acceleration, stopping, counter-strafe, walk and crouch speeds, jump height and arc, air steering, mid-air reversal, landing slow-down and crouch-jump. Retune using the Valorant measurements. The AimPro numbers are only a comparison and are never copied in.
 5. **Update the guide's reference numbers.** Label each value by where it came from: `wiki`, `measured` (from the recording) or `est`.
 6. **Merge:**
    - Re-credit the two Claude-authored commits on `system-check-placement` to Shakan-77, then merge that branch into `main`.
-   - `outside-values-test` stays local. Delete it once the measurements are in, unless the owner decides otherwise.
+   - `outside-values-test` stays local until the owner decides whether AimPro-derived jump and air values may go public. If not, retune the same behaviour from the Valorant recording and drop the branch.
    - Every push adds its changes to CONTEXT.md.
 7. **Playtest by hand:** the new drills (Pre-aim Route, Anti-flash), the System check with a real mouse, and the retuned movement.
 
@@ -83,7 +83,7 @@ StrafeLab's movement numbers are partly measured and partly estimated. This plan
 
 ## Open questions
 
-- **Air steering:** in Valorant, does W plus the camera steer (StrafeLab), or do you need a strafe key, Quake-style (AimPro)? Tests 16 to 20 settle it.
+- **Air steering:** the user's playtest favours AimPro's Quake-style steering (strafe key plus mouse). Tests 16 to 20 confirm it and refine the 0.75 m/s cap and the 0.45 air control.
 - **Mid-air reversal:** does it carry you behind take-off (StrafeLab, about 0.5 m) or just stop you (AimPro)? Tests 21 to 23 settle it.
-- **Jump apex:** 0.91 m (StrafeLab) or about 1.15 m (AimPro)? Tests 10 and 13 settle it.
+- **Jump apex:** now about 1.15 m (AimPro). Tests 10 and 13 confirm it, along with the crouch-jump reach (1.37 m) and the Silent Jumps ledge heights.
 - **Landing slow-down:** is there a speed dip after landing, separate from the +7° accuracy penalty? Tests 11 and 24 settle it.
