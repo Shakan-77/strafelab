@@ -1,12 +1,12 @@
 /**
- * TEST-ONLY movement profile on branch `outside-values-test`. Enable it with ?physics=aimpro.
+ * AimPro movement model on branch `latest-version` (formerly `outside-values-test`). Its jump, air steering and landing drive the default physics; ?physics=aimpro runs it in full.
  *
  * Source of the numbers: the AimPro (aimpro.world) web client, as mirrored in the GitHub repo
  * XDL0-0/miaozhun-offline (upstream/aimpro-2026-11-05/client/aim-kernels/kernel-aimlab-42-*.js,
  * player movement config `LA`). That client has no license, and the mirror redistributes it without
- * permission, so these values are not cleared for a public release. They are AimPro's own tuning of
- * Valorant, not Riot data. Only the numbers were taken; the step functions below are StrafeLab's
- * own implementation of the model they describe. See CONTEXT.md and PLAN.md before merging any of it.
+ * permission. The repository owner chose to publish these values on `latest-version` knowing that.
+ * They are AimPro's own tuning of Valorant, not Riot data. Only the numbers were taken; the step
+ * functions below are StrafeLab's own implementation of the model they describe. See CONTEXT.md and PLAN.md.
  */
 export const AIMPRO = {
   // base values at knife speed (6.75 m/s); everything scales by weaponRun / 6.75

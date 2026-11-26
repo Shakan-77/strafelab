@@ -9,7 +9,7 @@ StrafeLab's movement numbers are partly measured and partly estimated. This plan
 | VALORANT wiki and Riot patch notes | Run speeds, accuracy cutoffs, spread, landing penalty, tagging | Yes (already in) |
 | User's descriptions of Valorant | Air drift of about 1/12 of the jump with keys only, a 180° turn landing about 0.5 m behind, silent-jump rules | Yes (already in) |
 | Radiant movement guide video (frame-by-frame key overlay) | Rifle accurate 83 ms after the opposite key, and the A key pulling a jump peek back | Yes. The 80 ms counter-strafe is on `system-check-placement` |
-| AimPro numbers (scraped client, no license) | A full ground, air, jump and landing model | Owner's call. On the local branch `outside-values-test`, AimPro's jump, air steering and landing are the default (the user judged them closer to Valorant), while StrafeLab keeps its ground movement and silent-jump rules |
+| AimPro numbers (scraped client, no license) | A full ground, air, jump and landing model | Published by the owner's choice on branch `latest-version` (pushed 27 Nov 2026): AimPro's jump, air steering and landing are the default (the user judged them closer to Valorant), while StrafeLab keeps its ground movement and silent-jump rules |
 
 ## Steps
 
@@ -21,8 +21,8 @@ StrafeLab's movement numbers are partly measured and partly estimated. This plan
 4. **Decide mechanic by mechanic** (jump and air steering are already decided in AimPro's favour by the user's playtest; the recording should confirm or refine them) what to change in StrafeLab's own model: acceleration, stopping, counter-strafe, walk and crouch speeds, jump height and arc, air steering, mid-air reversal, landing slow-down and crouch-jump. Retune using the Valorant measurements. The AimPro numbers are only a comparison and are never copied in.
 5. **Update the guide's reference numbers.** Label each value by where it came from: `wiki`, `measured` (from the recording) or `est`.
 6. **Merge:**
-   - The re-credit is done on `outside-values-test` (`ec0b607`, `f66ab16`). Merge from that history, not from the old `system-check-placement` commits. `origin/system-check-placement` was force-pushed to the re-credited history on 27 Nov 2026.
-   - `outside-values-test` stays local until the owner decides whether AimPro-derived jump and air values may go public. If not, retune the same behaviour from the Valorant recording and drop the branch.
+   - The re-credit is done on `latest-version` (`ec0b607`, `f66ab16`). Merge from that history, not from the old `system-check-placement` commits. `origin/system-check-placement` was force-pushed to the re-credited history on 27 Nov 2026.
+   - `latest-version` (formerly `outside-values-test`) is on GitHub with the AimPro-derived jump and air values, by the owner's choice. Merging it into `main` is the next decision. If the values should later be replaced, retune the same behaviour from the Valorant recording.
    - Every push adds its changes to CONTEXT.md.
 7. **Playtest by hand:** the new drills (Pre-aim Route, Anti-flash), the System check with a real mouse, and the retuned movement.
 

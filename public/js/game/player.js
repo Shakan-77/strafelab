@@ -28,7 +28,7 @@ export const PHYSICS = (() => {
  *   comes to rest in ~160 ms. Pressing the opposite key crosses it in ~78 ms (10 ticks), matching
  *   Range footage of a Radiant player with 0.00° movement error 83 ms after the opposite key.
  *   Unreal-style braking: dv/dt = -(brakeFriction·v + brakeDecel)
- * - jump, air and landing (default since branch outside-values-test, from AimPro's model in
+ * - jump, air and landing (default since branch latest-version, from AimPro's model in
  *   physics-aimpro.js), retuned by playtest: apex ~1.0 m over ~0.675 s (AimPro: 1.15 m); Quake-style air control where you steer with a
  *   strafe key plus the mouse (W alone barely bends your path), speed along your keys capped at
  *   0.75 m/s, half accel when pushing against your path; a speed dip for 0.5 s after landing

@@ -30,7 +30,7 @@ The regular URL uses real browser mouse capture. Add `?debug=1` to bypass captur
 | `public/js/syscheck.js` | The **System check** tab: an 8-second captured test that feeds `InputProbe` both `mousemove` and `pointerrawupdate`, then `assess()` turns the summary into rows and fixes. The last result persists in `strafelab.check.v1`. |
 | `public/js/guide.js` | In-game guide text and the reference numbers table. Each number is labelled `wiki` (VALORANT wiki or Riot patch notes) or `est` (StrafeLab estimate). |
 | `public/js/scenarios/tactics.js` | Pre-aim Route and Anti-flash drills. |
-| `public/js/game/physics-aimpro.js` | Branch `outside-values-test` only: the test-only AimPro movement profile (`?physics=aimpro`). |
+| `public/js/game/physics-aimpro.js` | Branch `latest-version` only: the AimPro movement model, whose jump, air steering and landing drive the default physics (`?physics=aimpro` runs it in full). |
 | `PLAN.md` | The plan for measuring and retuning movement, with the Valorant Range recording list. |
 | `public/js/scenarios/*.js` | One module per drill, registered in `index.js`. |
 
@@ -109,7 +109,7 @@ Ideas taken from looking at other browser Valorant trainers (valox.gg has a perf
 - **Unchanged:** all air movement. The air checks give the same numbers before and after: W+D drift 0.30 m over 3.61 m, 180° flick or S lands 0.52 m behind take-off, A at take-off while flying right lands 0.52 m back, keys held lands 3.63 m out.
 - **Guide:** the counter-strafing text and the Rifle stop time row now say about 80 ms counter-strafing and about 106 ms release.
 
-### Pre-aim Route and Anti-flash (`b4952d8` on `outside-values-test`, `f4dabbb` on local `system-check-placement`)
+### Pre-aim Route and Anti-flash (`b4952d8` on `latest-version`, `f4dabbb` on local `system-check-placement`)
 
 The user pointed at [valox.gg](https://valox.gg) as a reference. It has no public repository: it is a closed-source, ad-supported site whose bundled JavaScript isn't licensed for reuse, so no code or values were taken from it. Its catalogue was used only to find what StrafeLab lacked. ValoX groups its 114 exercises as Pre-aim (83), Angle holding (11), Anti-flash (5) and pro-clip Scenarios (15), and also has an Exercise Studio, a Skill check and a Performance check. StrafeLab already had angle holding and, on this branch, a System check. The two missing training types were built as original drills on original geometry. ValoX's recreations of real Valorant maps and pro clips were not copied (Riot and player content).
 
@@ -152,11 +152,11 @@ In game scripts, set `__sl.net.send = () => false` so test runs don't reach the 
 | --- | --- | --- |
 | `main` | Pushed | Everything through `f6ab0ad`. |
 | `system-check-placement` | Pushed, force-pushed on 27 Nov 2026 to `7dc5d04` | System check tab, crosshair-placement scoring, counter-strafe at about 80 ms, and Pre-aim Route and Anti-flash, all credited to Shakan-77 (`ec0b607`, `f66ab16`, `b4952d8`). |
-| `outside-values-test` | Local only. Contains everything on `system-check-placement`, re-credited: `ec0b607` and `f66ab16` replace the Claude-authored `9e6c008` and `37404d4`, with Shakan-77 as author and committer and the Claude trailers removed (same files and dates). | AimPro's jump, air steering and landing are the default (user decision), with StrafeLab's ground movement and silent-jump rules kept. Weapon-scaled acceleration and a knife in every run. Read the next section before pushing or merging. |
+| `latest-version` (formerly `outside-values-test`) | Pushed on 27 Nov 2026. This is the latest version of StrafeLab. | Everything on `system-check-placement`, plus AimPro's jump, air steering and landing as the default (user decision), with StrafeLab's ground movement and silent-jump rules kept. Also a lower jump and softer landing from playtest, weapon-scaled acceleration, and a knife in every run. |
 
-## `outside-values-test`: AimPro's movement numbers
+## `latest-version`: AimPro's movement numbers
 
-**Do not merge this branch into `main` and do not push it without the owner deciding to.** The numbers are not cleared for public use.
+**Pushed to GitHub on 27 Nov 2026 at the owner's request, as `latest-version`.** The owner chose to publish the AimPro-derived values knowing their source has no license (see below). Merging into `main` is a separate decision.
 
 - **Where the numbers come from:** the user asked to test the values used by AimPro ([aimpro.world](https://aimpro.world), the newer version of valox.gg). AimPro publishes no source and no license. The values were read from the GitHub repo [XDL0-0/miaozhun-offline](https://github.com/XDL0-0/miaozhun-offline). That repo redistributes a scraped copy of AimPro's client without permission. The values are in `upstream/aimpro-2026-11-05/client/aim-kernels/kernel-aimlab-42-12a05ce14b5d.js`, in the player movement config `LA`. They are AimPro's own tuning of Valorant, not Riot data. A second repo, [unkwsr/open-aim](https://github.com/unkwsr/open-aim), is MIT for its own code. However, it runs the same unlicensed game files, and its only movement file is a Jett dash/updraft tuning that it says comes from decompiled Valorant Blueprints. Nothing was taken from open-aim.
 - **What was taken:** only numbers. `public/js/game/physics-aimpro.js` is StrafeLab's own implementation of the model those numbers describe, with the source noted at the top of the file. No AimPro code was copied.
@@ -199,7 +199,7 @@ In game scripts, set `__sl.net.send = () => false` so test runs don't reach the 
   | S right after take-off | Lands 0.6 m behind | Stops: lands 0.18 m ahead at 0.75 m/s |
   | Running right, A right after take-off | Lands 0.6 m back | Stops: lands 0.18 m out at 0.75 m/s |
 
-### `outside-values-test`, second commit: AimPro jump and air steering become the default
+### `latest-version`, second commit: AimPro jump and air steering become the default
 
 The user played both models (default vs `?physics=aimpro`) and judged AimPro's **jumping and air steering closer to Valorant**. They judged StrafeLab's **silent-jump mechanics better**, so those stay.
 
@@ -230,7 +230,7 @@ The user played both models (default vs `?physics=aimpro`) and judged AimPro's *
 - **Leaderboards:** Air Course and Silent Jumps times set under the old physics aren't directly comparable. Nothing was reset.
 - **Not checked yet:** a hand playtest of the new default, especially Air Course on Hard and Silent Jumps.
 
-### `outside-values-test`, third commit: lower jump, quieter stairs, softer landing
+### `latest-version`, third commit: lower jump, quieter stairs, softer landing
 
 The owner's second playtest found three problems: the jump was a bit too high, walking down the Silent Jumps stairs gave loud landings (0.33 m drops), and moving after a landing felt too heavy.
 
@@ -251,7 +251,7 @@ The owner's second playtest found three problems: the jump was a bit too high, w
   | Walk jump on flat ground | Loud, as before |
   | Speed after a full jump | 5.4 → 4.14 m/s at 47 ms, 4.02 m/s at 0.1 to 0.2 s, 4.84 m/s at 0.4 s, back to 5.4 m/s at 0.5 s |
 
-### `outside-values-test`, fourth commit: weapon-scaled acceleration and a knife in every run
+### `latest-version`, fourth commit: weapon-scaled acceleration and a knife in every run
 
 - **Acceleration by weapon:** StrafeLab's ground acceleration and braking were fixed in m/s², so a faster weapon took longer to reach top speed and to stop. They now scale with the weapon's run speed (`MOVE.refRunSpeed` = 5.4), as AimPro's model does. Every weapon now reaches full speed in 258 ms, releases to a full stop in 164 ms, and counter-strafes to a stop in 117 ms. Time to the accuracy cutoff depends on the weapon's deadzone:
 
@@ -275,9 +275,9 @@ The owner's second playtest found three problems: the jump was a bit too high, w
 
 - **What the first comparison said (before the user's decision):** the two models agree closely on ground stopping. They disagree on air control: AimPro is classic Quake/CS strafing, where turning with W does nothing, strafe plus mouse gains speed, and opposite keys only stop you. StrafeLab matches the user's own Valorant observations: W plus the camera steers, you gain no speed, and a 180° turn carries you about 0.5 m behind. Use the Valorant Range recording in [PLAN.md](PLAN.md) to decide each mechanic. Don't take either model on trust.
 
-### Re-credit (fifth change on `outside-values-test`)
+### Re-credit (fifth change on `latest-version`)
 
-The owner asked for the commits made by another Claude session to be re-credited. `git filter-branch` over `main..outside-values-test` rewrote `9e6c008` and `37404d4` to Shakan-77 as author and committer, and removed their `Co-Authored-By: Claude …` and `Claude-Session:` lines. The rewritten history has the same file tree (checked) and the same commit dates. As a result, every commit on the branch has a new hash:
+The owner asked for the commits made by another Claude session to be re-credited. `git filter-branch` over `main..latest-version` rewrote `9e6c008` and `37404d4` to Shakan-77 as author and committer, and removed their `Co-Authored-By: Claude …` and `Claude-Session:` lines. The rewritten history has the same file tree (checked) and the same commit dates. As a result, every commit on the branch has a new hash:
 
 | Commit | Old hash | New hash |
 | --- | --- | --- |
@@ -289,7 +289,11 @@ The owner asked for the commits made by another Claude session to be re-credited
 | Lower jump | `e3832ea` | `192e63c` |
 | Knife and acceleration | `71038d0` | `fb6cf42` |
 
-On 27 Nov 2026 the owner had `origin/system-check-placement` force-pushed to the re-credited `ec0b607`, `f66ab16` and `b4952d8`, plus a CONTEXT.md note (`7dc5d04`). The old Claude-credited commits are gone from GitHub. This branch's AimPro-derived commits were not pushed.
+On 27 Nov 2026 the owner had `origin/system-check-placement` force-pushed to the re-credited `ec0b607`, `f66ab16` and `b4952d8`, plus a CONTEXT.md note (`7dc5d04`). The old Claude-credited commits are gone from GitHub. This branch's AimPro-derived commits were pushed separately as `latest-version` (see below).
+
+### `latest-version` pushed (27 Nov 2026)
+
+At the owner's request, the local branch `outside-values-test` was renamed `latest-version` and pushed to GitHub as the latest version of StrafeLab. It holds every commit from `system-check-placement` (re-credited), then the AimPro profile, the AimPro-style default jump and air steering, the playtest retune (1.0 m jump, softer landing, quiet stairs), weapon-scaled acceleration and the knife in every run. Restart `server.py` after pulling: `scenarios.json` has 18 drills.
 
 ## Verification and open issues
 
