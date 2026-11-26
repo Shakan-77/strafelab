@@ -58,6 +58,7 @@ export const GUIDE = [
       'Typical human visual reaction is 180 to 250 ms. Your monitor and mouse add to it.',
       'Hold the edge, not the middle of the gap. Swingers show up at the edge first.',
       'Hard mode adds decoys and jiggles so you learn not to fire at bait.',
+      'Results show your crosshair placement: how far the crosshair was from the enemy\'s head the moment they came into view. Within 2° counts as pre-aimed. Height bias says whether you hold too low or too high.',
     ],
   },
   {
@@ -68,6 +69,7 @@ export const GUIDE = [
       'Exposure time is the number that matters. Clear the angle, stop, shoot, done.',
       'Being exposed while slow is the worst case: easy to hit, and you can\'t shoot back yet.',
       'Clear one side at a time.',
+      'Each round banner shows how far your crosshair was from the enemy when they appeared. Pre-aim where a head will be before you swing.',
     ],
   },
   {

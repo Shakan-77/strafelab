@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Scenario } from './base.js';
+import { Scenario, PREAIM_DEG, fmtBias } from './base.js';
 import { Bot, Orb } from '../game/targets.js';
 import { MOVE } from '../game/player.js';
 import { BotGun, PLAYER_HP } from '../game/botfire.js';
@@ -576,6 +576,7 @@ export class MoveCourse extends TimeTrial {
     this.checkZones();
     const bot = this.roomBot;
     if (bot && bot.alive) {
+      if (!this.roomPlacement && this.game.botVisible(bot)) this.roomPlacement = this.notePlacement(bot);
       const sees = this.game.playerVisibleFrom(bot.headWorld());
       if (sees) {
         this.botExposure += dt;
@@ -619,6 +620,9 @@ export class MoveCourse extends TimeTrial {
 
   onShot(s) {
     this.countShot(s);
+    if (s.killed && s.target === this.roomBot && this.roomPlacement) {
+      this.hudApi.banner(`ROOM CLEARED · crosshair ${this.roomPlacement.deg.toFixed(1)}° off on entry`, this.roomPlacement.deg <= PREAIM_DEG ? 'good' : 'warn', 1.4);
+    }
     if (s.hit && this.gallery.includes(s.target)) {
       this.gallery = this.gallery.filter((o) => o !== s.target);
       if (!this.gallery.length) {
@@ -637,6 +641,7 @@ export class MoveCourse extends TimeTrial {
       ['Times traded', this.traded],
       ['Falls', this.falls],
       ['Accuracy', `${pct(this.hits, this.shots)}%`],
+      ['Room entry placement', this.roomPlacement ? `${this.roomPlacement.deg.toFixed(1)}° off · ${fmtBias(this.roomPlacement.vert)}` : '-'],
     ];
   }
 

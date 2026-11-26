@@ -26,6 +26,8 @@ The regular URL uses real browser mouse capture. Add `?debug=1` to bypass captur
 | `public/js/game/weapons.js` | Weapon profiles (rifle, sniper, knife), spread, and accuracy thresholds. |
 | `public/js/game/botfire.js` | `BOT_SKILL` table (reaction, fire interval, hit chances) and the shared `BotGun` used by every drill where bots shoot back. |
 | `public/js/game/targets.js`, `public/js/game/skins.js`, and `public/js/audio.js` | Original procedural bots and rifle models, plus synthesized sound. |
+| `public/js/inputprobe.js` | `InputProbe`: measures mouse event delivery and frame pacing. Counts stalls, spikes, hitches, event delay, and (when fed `pointerrawupdate`) the polling rate. Never changes aim. |
+| `public/js/syscheck.js` | The **System check** tab: an 8-second captured test that feeds `InputProbe` both `mousemove` and `pointerrawupdate`, then `assess()` turns the summary into rows and fixes. The last result persists in `strafelab.check.v1`. |
 | `public/js/guide.js` | In-game guide text and the reference numbers table. Each number is labelled `wiki` (VALORANT wiki or Riot patch notes) or `est` (StrafeLab estimate). |
 | `public/js/scenarios/*.js` | One module per drill, registered in `index.js`. |
 
@@ -86,6 +88,16 @@ These commits follow the user's feedback from playing Valorant. Riot doesn't pub
 - **Guide:** the air-strafing text now describes pulling a jump peek back with the opposite strafe key.
 - **Other findings from the same video, not yet applied:** dead-zoning clips in the Range showed 0.00° movement error on rifle shots fired 83 ms after pressing the opposite key from full speed. StrafeLab needs about 102 ms to reach the accuracy cutoff in the same situation. Shortening StrafeLab's counter-strafe to about 80 ms was proposed, and the user hasn't decided yet.
 
+### System check and crosshair placement (branch `system-check-placement`)
+
+Ideas taken from looking at other browser Valorant trainers (valox.gg has a performance check; both it and aimpro.world train crosshair placement). Nothing was copied from them: no code, assets or map layouts.
+
+- **System check tab.** Captures the mouse (raw input if Settings > Mouse asks for it) and samples 8 s from the first movement. A **stall** is a `mousemove` gap longer than `max(2.5 frames, 20 ms)` while at least 3 `pointerrawupdate` events arrived in it, so the mouse was still reporting. A **spike** is one event over 400 counts and 10x both neighbours. The first event after a stall carries the piled-up movement and isn't counted as a spike. Polling is the median raw-event interval, snapped to 125–8000 Hz. **Movement values** flags fractional `movementX/Y`, which means something is rescaling counts. A **hitch** is a frame over `max(2 × median, median + 8 ms)`.
+- **In drills,** `game.probe` samples `mousemove` and frames only while captured and unpaused, and resets on capture. Without raw events, a stall needs typical motion speed on both sides of the gap, so stopping the mouse isn't counted. The pause menu's **Input details** line shows the counts since capture. No `pointerrawupdate` listener runs in drills.
+- **Crosshair placement.** `game.aimError(point)` returns the angle between the rendered camera direction (including recoil) and a point, with its vertical and horizontal parts. `Scenario.notePlacement(bot)` records it the first frame `botVisible(bot)` is true. Peek Duels and Angle Hold add **Crosshair placement**, **Pre-aimed (≤2°)** and **Height bias** to results. Movement Course adds **Room entry placement**. To avoid revealing an enemy, the HUD only updates after the enemy is dealt with (`revealPlacements()`): Angle Hold kill feedback shows it, and Peek Duels round banners show the round's average. Scores and leaderboards are unchanged.
+- **Small fixes:** the HP readout no longer shows negative values after a death.
+- **Verified** with a synthetic probe test in Node (clean input, a 120 ms stall, a 400 ms pause, a spike, 8000 Hz polling, scaled values, with and without raw events) and in headless Chrome: the System check end to end with faked pointer lock and a forced 150 ms stall, placement recording in all three drills, and no console errors. A physical-mouse run on the user's setup is still needed.
+
 ### Sound rules in force (`player.js`)
 
 | Event | Silent when | Loud when |
@@ -116,7 +128,7 @@ Chrome automation verified mouse look while strafing and jumping in fullscreen, 
 
 After integrating the collaborator's commits, Chrome automation checked native capture and resume, 64 scripted Grid Taps hits, two-hit transfer scoring, last-run comparisons, and the selected weapon on restart. The physics checks covered steering at 30, 60 and 144 FPS, a reachable trajectory through each Air Strafe Course bend on every difficulty, mid-air reversal, tagging, and quiet landings.
 
-- **Mouse sticking:** the user reported intermittent mouse sticking during rapid Grid Taps flicks and clicks, and earlier while strafing or airborne in Counter-Strafe. The exact freeze did not reproduce in automation. A physical-mouse playtest on the affected setup is still pending. If it recurs, pause and open **Input details** to check delivered mouse events and the longest recent frame.
+- **Mouse sticking:** the user reported intermittent mouse sticking during rapid Grid Taps flicks and clicks, and earlier while strafing or airborne in Counter-Strafe. The exact freeze did not reproduce in automation. A physical-mouse playtest on the affected setup is still pending. Run **System check** first and use **Copy report**. If it recurs in a drill, pause and open **Input details** for the stall, spike and hitch counts since capture.
 - **Air movement feel:** the air values are still estimates. The user has been tuning them against Valorant one behaviour at a time. Hand-playtesting of `976789f` and `f641ec6` is pending.
 
 For browser input and hit-testing references, see the [MIT-licensed AimForge input code](https://github.com/Shiraikuroko123/aimforge/blob/main/js/game.js), [VANTA](https://github.com/aimtrainer-code/aim-trainer), and [Three.js PointerLockControls](https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/PointerLockControls.js).

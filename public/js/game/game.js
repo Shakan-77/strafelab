@@ -7,8 +7,10 @@ import { Hud } from './hud.js';
 import { Ghosts } from './ghosts.js';
 import { buildRifle, skinOf } from './skins.js';
 import { RNG } from '../rng.js';
+import { InputProbe } from '../inputprobe.js';
 import { SCENARIOS } from '../scenarios/index.js';
-import { clamp, DEG, el } from '../util.js';
+import { angleDiff, clamp, DEG, el } from '../util.js';
+import { anglesOf } from '../scenarios/base.js';
 import { crosshairFromSettings, drawCrosshair, keyLabel, VALORANT_YAW } from '../settings.js';
 
 const TICK = 1 / 128; // Valorant servers run at 128 tick
@@ -25,7 +27,7 @@ const _v1 = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
 
-const frameSample = () => ({ t: 0, n: 0, moves: 0, longest: 0 });
+const frameSample = () => ({ t: 0, n: 0 });
 
 export class Game {
   constructor({ canvas, settings, audio, net, debug, onFinish, onQuit }) {
@@ -90,6 +92,7 @@ export class Game {
     this.lockPending = false;
     this.acc = 0;
     this.fpsAcc = frameSample();
+    this.probe = new InputProbe();
     this.netT = { live: 0, pos: 0 };
     this.party = null;
 
@@ -223,7 +226,7 @@ export class Game {
     // same physical motion twice or drops part of a coalesced move.
     document.addEventListener('mousemove', (e) => {
       if (!this.acceptsMouseInput()) return;
-      if (e.movementX || e.movementY) this.fpsAcc.moves++;
+      this.probe.move(e);
       this.look(e.movementX, e.movementY);
     }, { capture: true, passive: true });
     for (const type of ['dragstart', 'selectstart']) {
@@ -429,8 +432,8 @@ export class Game {
   }
 
   onLocked() {
-    this.lastInputSample = null;
     this.fpsAcc = frameSample();
+    this.probe.reset();
     this.audio.ensure();
     document.getElementById('overlay-lock').hidden = true;
     document.getElementById('overlay-pause').hidden = true;
@@ -450,10 +453,7 @@ export class Game {
       ? 'Party run in progress, so the timer keeps running.'
       : 'The timer is stopped.';
     p.querySelector('.pause-note').textContent = reason ? `${reason} ${timing}` : timing;
-    const sample = this.lastInputSample || this.fpsAcc;
-    document.getElementById('pause-input').textContent = sample.n
-      ? `${this.captureMode || 'Debug input'} · ${sample.moves} mouse moves in ${sample.t.toFixed(2)} s · longest frame ${Math.round(sample.longest * 1000)} ms (last sample before pause).`
-      : 'No frames sampled since capture.';
+    document.getElementById('pause-input').textContent = this.probe.line(this.captureMode || 'Debug input');
     const metrics = this.state === 'running' ? this.scenario.hud() : [];
     document.getElementById('pause-stats').replaceChildren(...metrics.map(([k, v]) =>
       el('div', {}, el('span', {}, k), el('b', {}, v))));
@@ -666,6 +666,20 @@ export class Game {
 
   eyePos(out = new THREE.Vector3()) {
     return out.set(this.player.pos.x, this.player.pos.y + this.player.eye, this.player.pos.z);
+  }
+
+  /**
+   * How far the crosshair is from a world point, in degrees. `vert` is positive when the
+   * point is above the crosshair, `horiz` positive when it is to the left.
+   */
+  aimError(point) {
+    // The rendered camera, so the error matches what was on screen.
+    const want = anglesOf(_v2.subVectors(point, this.camera.position));
+    const pitch = this.pitch + this.recoil * DEG;
+    const cp = Math.cos(pitch);
+    const fwd = _v3.set(-Math.sin(this.yaw) * cp, Math.sin(pitch), -Math.cos(this.yaw) * cp);
+    const total = Math.acos(clamp(fwd.dot(_v2.normalize()), -1, 1));
+    return { deg: total / DEG, vert: (want.pitch - pitch) / DEG, horiz: angleDiff(want.yaw, this.yaw) / DEG };
   }
 
   /** Can the player see the bot (head or chest)? */
@@ -958,13 +972,14 @@ export class Game {
     this.lastT = now;
     if (!(dt > 0)) dt = 0;
     this.fpsAcc.t += dt;
-    this.fpsAcc.longest = Math.max(this.fpsAcc.longest, dt);
     this.fpsAcc.n += 1;
     if (this.fpsAcc.t >= 0.5) {
       this.hud.fps(Math.round(this.fpsAcc.n / this.fpsAcc.t));
-      this.lastInputSample = this.fpsAcc;
       this.fpsAcc = frameSample();
     }
+    // Input diagnostics only while the mouse is captured and the run is live.
+    if (!this.paused && this.acceptsMouseInput()) this.probe.frame(now);
+    else this.probe.lastFrame = null;
 
     if (dt > 0.1) dt = 0.1;
     const simulate = !this.paused || !!this.party;

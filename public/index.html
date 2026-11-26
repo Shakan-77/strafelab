@@ -26,6 +26,7 @@
         <button data-tab="leaderboard">Leaderboards</button>
         <button data-tab="settings">Settings</button>
         <button data-tab="guide">Guide</button>
+        <button data-tab="check">System check</button>
       </nav>
       <div class="me">
         <span id="net-status" class="net offline">offline</span>
@@ -72,6 +73,11 @@
         <section id="tab-guide" class="tab" hidden>
           <div class="section-head"><h1>Guide</h1><p class="muted">What each drill trains and how the mechanic works in Valorant.</p></div>
           <div id="guide-body" class="guide-grid"></div>
+        </section>
+
+        <section id="tab-check" class="tab" hidden>
+          <div class="section-head"><h1>System check</h1><p class="muted">Test how your mouse and display reach StrafeLab.</p></div>
+          <div id="check-body" class="check-grid"></div>
         </section>
       </div>
       <aside id="party-panel" class="party panel"></aside>
@@ -123,7 +129,7 @@
         <h2>Paused</h2>
         <p class="pause-note" role="status"></p>
         <div id="pause-stats"></div>
-        <details class="input-details"><summary>Input details</summary><p id="pause-input"></p></details>
+        <details class="input-details"><summary>Input details</summary><p id="pause-input"></p><p class="muted small">For a full test with polling rate, quit and open <b>System check</b>.</p></details>
         <div class="btns">
           <button data-act="resume" class="primary">Resume</button>
           <button data-act="restart">Restart</button>

@@ -5,6 +5,7 @@ import { Net } from './net.js';
 import { AudioFX } from './audio.js';
 import { WEAPONS } from './game/weapons.js';
 import { GUIDE, NUMBERS } from './guide.js';
+import { SystemCheck } from './syscheck.js';
 import { el, fmtScore, mean, timeAgo } from './util.js';
 import {
   loadSettings, saveSettings, clientId, edpi, cmPer360, parseCrosshairCode, crosshairToCode,
@@ -39,6 +40,7 @@ const S = {
 
 let game;
 let net;
+let sysCheck;
 let audio;
 const $ = (id) => document.getElementById(id);
 /** replaceChildren that skips null/false entries (DOM would render them as text). */
@@ -98,12 +100,13 @@ function seg(options, value, onPick, cls = '') {
 function showTab(tab) {
   stopBindListen();
   for (const b of document.querySelectorAll('.tabs button')) b.classList.toggle('active', b.dataset.tab === tab);
-  for (const t of ['train', 'leaderboard', 'settings', 'guide']) $(`tab-${t}`).hidden = t !== tab;
+  for (const t of ['train', 'leaderboard', 'settings', 'guide', 'check']) $(`tab-${t}`).hidden = t !== tab;
   if (tab === 'leaderboard') {
     requestLb(S.lbScenario, S.lbDiff, S.lbFilter);
     renderLeaderboard();
   }
   if (tab === 'settings') renderSettings();
+  if (tab === 'check' && !sysCheck) sysCheck = new SystemCheck($('check-body'), () => S.settings);
 }
 
 // ------------------------------------------------------------------ train tab

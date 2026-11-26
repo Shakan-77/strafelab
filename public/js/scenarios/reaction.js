@@ -226,7 +226,10 @@ export class AngleHold extends Scenario {
       if (this.elapsed >= this.next) this.spawnPeek();
       return;
     }
-    if (b.firstSeen == null && this.game.botVisible(b)) b.firstSeen = this.elapsed;
+    if (b.firstSeen == null && this.game.botVisible(b)) {
+      b.firstSeen = this.elapsed;
+      b.placement = this.notePlacement(b);
+    }
     if (b.behavior === 'peek' && b.state === 'hold' && b.firstSeen != null && b.shotAt == null) {
       // once stopped and its reaction time is up, it fires taps for up to 1.2 s, then backs off
       b.shotAt = Math.max(b.firstSeen + this.reaction, this.elapsed + 0.05);
@@ -256,6 +259,7 @@ export class AngleHold extends Scenario {
       }
     }
     if (b.escaped) {
+      this.revealPlacements();
       b.despawn();
       this.bot = null;
       this.next = this.elapsed + this.rng.float(this.delay);
@@ -277,7 +281,9 @@ export class AngleHold extends Scenario {
       if (head) this.hsKills += 1;
       if (b.kind === 'wide') this.wideKills += 1;
       this.points += 100 + Math.max(0, (this.reaction - ttk) / this.reaction) * 100 + (head ? 25 : 0);
-      this.hudApi.feedback(fmtMs(ttk), ttk < this.reaction ? 'good' : 'warn', 0.6);
+      this.revealPlacements();
+      const off = b.placement ? ` · ${b.placement.deg.toFixed(1)}° off` : '';
+      this.hudApi.feedback(`${fmtMs(ttk)}${off}`, ttk < this.reaction ? 'good' : 'warn', 0.8);
       this.bot = null;
       this.next = this.elapsed + this.rng.float(this.delay);
     }
@@ -286,10 +292,11 @@ export class AngleHold extends Scenario {
   hud() {
     return [
       ['Kills', `${this.kills}`],
-      ['HP', this.hp, this.hp < PLAYER_HP ? 'bad' : ''],
+      ['HP', Math.max(0, this.hp), this.hp < PLAYER_HP ? 'bad' : ''],
       ['Deaths', this.deaths, this.deaths ? 'bad' : ''],
       ['Avg TTK', this.ttks.length ? fmtMs(mean(this.ttks)) : '-'],
       ['Enemy reaction', fmtMs(this.reaction)],
+      this.placementHud(),
     ];
   }
 
@@ -304,6 +311,7 @@ export class AngleHold extends Scenario {
       ['Headshot kills', `${pct(this.hsKills, this.kills)}%`],
       ['Wide-swing kills', this.wideKills],
       ['Accuracy', `${pct(this.hits, this.shots)}%`],
+      ...this.placementStats(),
     ];
   }
 }

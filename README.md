@@ -37,6 +37,12 @@ Options: `--port 9000`, `--host 127.0.0.1` (local only). By default the server l
 
 Each drill has Easy, Medium and Hard, and each difficulty has its own leaderboard.
 
+Peek Duels, Angle Hold and Movement Course also score your **crosshair placement**: how far the crosshair was from the enemy's head at the moment they came into view, the share of enemies you had pre-aimed (within 2°), and whether you tend to hold too low or too high. It doesn't change the score or leaderboards.
+
+## System check
+
+The **System check** tab runs an 8-second captured mouse test and explains the result in plain language: polling rate, input stalls (your mouse kept reporting but the page stopped getting mouse events, which feels like the aim sticking), single-event movement spikes, rescaled mouse values, frame rate, frame hitches and event delay. Each problem comes with what to try, and **Copy report** puts the numbers on your clipboard. In a drill, **Pause > Input details** shows the same stall, spike and hitch counts since the mouse was captured.
+
 ## Rifle skins
 
 Pick a rifle skin in **Settings > Rifle skin**, with a live 3D preview: Standard, **Pulse Core** (carbon weave with pulsing circuit traces), **Verdant Bloom** (stone and glowing vines), **Bastion Gilt** (ivory plating, gold trim, sapphire core) or **Wraithbound** (black steel in a flickering violet haze). Each skin animates on the first-person rifle, tints your tracers and plays its own kill sound. All of them are original: textures are generated in code and sounds are synthesized with WebAudio, so the repo contains no game assets.
@@ -71,6 +77,8 @@ server.py                  HTTP + WebSocket server, parties, leaderboard (data/l
 public/index.html          UI shell
 public/data/scenarios.json drill metadata, shared by client and server
 public/js/main.js          menus, party lobby, leaderboards, settings, results
+public/js/syscheck.js      System check tab
+public/js/inputprobe.js    input and frame measurements shared by the System check and drills
 public/js/game/            engine: game loop, player physics, weapons, bots, HUD, ghosts
 public/js/scenarios/       the drills
 ```

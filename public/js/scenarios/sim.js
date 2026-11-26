@@ -87,11 +87,13 @@ export class PeekDuel extends Scenario {
       if (placed) {
         placed.exposure = 0;
         placed.hidden = 0;
+        placed.seenAt = null;
         placed.nextShot = 0;
         this.bots.push(placed);
       }
     }
     this.firstExposed = null;
+    this.roundPlacementFrom = this.placements.length;
     this.phase = 'live';
     this.hudApi.banner(`ROUND ${this.round} / ${this.rounds}`, 'info', 0.8);
   }
@@ -109,6 +111,10 @@ export class PeekDuel extends Scenario {
     let maxExp = 0;
     for (const b of this.bots) {
       if (!b.alive) continue;
+      if (b.seenAt == null && this.game.botVisible(b)) {
+        b.seenAt = this.elapsed;
+        this.notePlacement(b);
+      }
       const sees = this.game.playerVisibleFrom(b.headWorld());
       if (sees) {
         b.exposure += dt;
@@ -139,9 +145,10 @@ export class PeekDuel extends Scenario {
   loseRound(exp, zone) {
     this.lost += 1;
     this.phase = 'post';
+    this.revealPlacements();
     this.nextAt = this.elapsed + 1.4;
     this.hudApi.flash('death', 0.8);
-    this.hudApi.banner(`KILLED${zone === 'head' ? ' (HEADSHOT)' : ''} · exposed ${fmtMs(exp)}`, 'bad', 1.3);
+    this.hudApi.banner(`KILLED${zone === 'head' ? ' (HEADSHOT)' : ''} · exposed ${fmtMs(exp)}${this.roundPlacement()}`, 'bad', 1.3);
     this.game.audio.death();
     this.game.freeze(1.4);
   }
@@ -158,20 +165,28 @@ export class PeekDuel extends Scenario {
     if (this.bots.every((x) => !x.alive)) {
       const worst = Math.max(...this.bots.map((x) => x.exposure));
       this.won += 1;
+      this.revealPlacements();
       this.points += 100 + Math.max(0, 1 - worst / this.reaction) * 100 + (this.hp === PLAYER_HP ? 25 : 0);
       this.phase = 'post';
       this.nextAt = this.elapsed + 1.0;
-      this.hudApi.banner(this.hp === PLAYER_HP ? 'ROUND WON · UNTOUCHED' : `ROUND WON · ${this.hp} HP left`, 'good', 0.9);
+      this.hudApi.banner(`${this.hp === PLAYER_HP ? 'ROUND WON · UNTOUCHED' : `ROUND WON · ${this.hp} HP left`}${this.roundPlacement()}`, 'good', 1.1);
       this.game.audio.good();
     }
+  }
+
+  /** Banner suffix: where the crosshair was when this round's enemies appeared. */
+  roundPlacement() {
+    const list = this.placements.slice(this.roundPlacementFrom ?? 0);
+    return list.length ? ` · crosshair ${mean(list.map((p) => p.deg)).toFixed(1)}° off` : '';
   }
 
   hud() {
     return [
       ['Round', `${Math.min(this.round, this.rounds)} / ${this.rounds}`],
-      ['HP', this.hp, this.hp < PLAYER_HP ? 'bad' : ''],
+      ['HP', Math.max(0, this.hp), this.hp < PLAYER_HP ? 'bad' : ''],
       ['Won / lost', `${this.won} / ${this.lost}`],
       ['Enemy reaction', fmtMs(this.reaction)],
+      this.placementHud(),
     ];
   }
 
@@ -184,6 +199,7 @@ export class PeekDuel extends Scenario {
       ['Accurate (stopped) shots', `${pct(this.accurateShots, this.shots)}%`],
       ['Headshot kills', `${pct(this.headKills, this.kills)}%`],
       ['Accuracy', `${pct(this.hits, this.shots)}%`],
+      ...this.placementStats(),
     ];
   }
 }
