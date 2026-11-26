@@ -6,7 +6,8 @@ import { clamp } from '../util.js';
  * - run 5.4 m/s with a rifle (6.75 with knife) [official wiki]; walk 56%, crouch 45% [estimates]
  * - acceleration: ~0.26 s from standstill to run speed (Unreal default; estimate)
  * - estimated braking: releasing the key crosses the rifle's 27.5% deadzone in ~106 ms and
- *   comes to rest in ~160 ms. Pressing the opposite key crosses the deadzone in ~100 ms.
+ *   comes to rest in ~160 ms. Pressing the opposite key crosses it in ~78 ms (10 ticks), matching
+ *   Range footage of a Radiant player with 0.00° movement error 83 ms after the opposite key.
  *   Unreal-style braking: dv/dt = -(brakeFriction·v + brakeDecel)
  * - jump apex ~0.93 m, ~0.67 s air time [estimates]
  * - air strafing: holding the strafe key toward your mouse turn bends your path to follow your
@@ -31,7 +32,9 @@ export const MOVE = {
   accel: 20.8, // estimated ~0.26 s from standstill to rifle run speed
   brakeFriction: 3.77, // 1/s  } fitted so 5.4 m/s → 25% in ~110 ms, full stop in ~160 ms
   brakeDecel: 24.5, // m/s² }
-  counterExtra: 2.2, // estimated extra m/s² while pressing the opposite key
+  // extra m/s² while pressing the opposite key: fitted so a full-speed rifle counter-strafe is
+  // accurate after 10 ticks (~78 ms), from Range footage showing accurate shots 83 ms after the press
+  counterExtra: 13,
   // m/s² mid-air toward input pointing back the way you jumped: calibrated so a full-speed jump
   // with an immediate 180° reversal lands ~0.5 m behind the take-off point, as in Valorant
   airReverse: 19,
@@ -312,7 +315,7 @@ export class Player {
           pz *= k;
         }
         if (along < 0) {
-          // counter-strafe: brake (a hair harder than releasing) until you stop, then accelerate
+          // counter-strafe: brake harder than releasing until you stop, then accelerate
           const decel = MOVE.brakeDecel + MOVE.counterExtra;
           const stopTime = Math.log1p(-along * MOVE.brakeFriction / decel) / MOVE.brakeFriction;
           along = stopTime >= dt ? -brake(-along, dt, decel) : Math.min(wishSpeed, MOVE.accel * (dt - stopTime));

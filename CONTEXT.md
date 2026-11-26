@@ -86,7 +86,7 @@ These commits follow the user's feedback from playing Valorant. Riot doesn't pub
 
   All the earlier checks in the verification table below still give the same results.
 - **Guide:** the air-strafing text now describes pulling a jump peek back with the opposite strafe key.
-- **Other findings from the same video, not yet applied:** dead-zoning clips in the Range showed 0.00° movement error on rifle shots fired 83 ms after pressing the opposite key from full speed. StrafeLab needs about 102 ms to reach the accuracy cutoff in the same situation. Shortening StrafeLab's counter-strafe to about 80 ms was proposed, and the user hasn't decided yet.
+- **Other findings from the same video, not yet applied:** dead-zoning clips in the Range showed 0.00° movement error on rifle shots fired 83 ms after pressing the opposite key from full speed. StrafeLab needed about 102 ms to reach the accuracy cutoff in the same situation. The user approved shortening it, which is done in the next section.
 
 ### System check and crosshair placement (branch `system-check-placement`)
 
@@ -97,6 +97,14 @@ Ideas taken from looking at other browser Valorant trainers (valox.gg has a perf
 - **Crosshair placement.** `game.aimError(point)` returns the angle between the rendered camera direction (including recoil) and a point, with its vertical and horizontal parts. `Scenario.notePlacement(bot)` records it the first frame `botVisible(bot)` is true. Peek Duels and Angle Hold add **Crosshair placement**, **Pre-aimed (≤2°)** and **Height bias** to results. Movement Course adds **Room entry placement**. To avoid revealing an enemy, the HUD only updates after the enemy is dealt with (`revealPlacements()`): Angle Hold kill feedback shows it, and Peek Duels round banners show the round's average. Scores and leaderboards are unchanged.
 - **Small fixes:** the HP readout no longer shows negative values after a death.
 - **Verified** with a synthetic probe test in Node (clean input, a 120 ms stall, a 400 ms pause, a spike, 8000 Hz polling, scaled values, with and without raw events) and in headless Chrome: the System check end to end with faked pointer lock and a forced 150 ms stall, placement recording in all three drills, and no console errors. A physical-mouse run on the user's setup is still needed.
+
+### Counter-strafe at ~80 ms (branch `system-check-placement`)
+
+- **Change:** `MOVE.counterExtra` goes from 2.2 to 13 m/s². Pressing the opposite key from full rifle speed now crosses the 27.5% accuracy cutoff in about 78 ms of continuous time, which is 10 physics ticks. Before, it took about 100 ms (13 ticks). Releasing the key is unchanged at about 106 ms, and the full stop on release is still about 160 ms.
+- **Why:** the Radiant video's Range clips showed 0.00° movement error on rifle shots fired 83 ms after the opposite key. A key press lands up to one tick before it takes effect, so a 10-tick crossing makes a typical counter-strafe accurate at 78 to 86 ms after the press.
+- **Side effects:** an ADAD reversal reaches zero speed in about 117 ms instead of 156 ms, and the time spent under the accuracy cutoff during a reversal drops from about 125 ms to about 109 ms. Bots use the same `counterExtra` (`targets.js`), so strafing bots reverse faster too and their dead points are a little shorter. Counter-Strafe Drill times-to-kill get a little faster, so new scores can be slightly higher than older leaderboard entries.
+- **Unchanged:** all air movement. The air checks give the same numbers before and after: W+D drift 0.30 m over 3.61 m, 180° flick or S lands 0.52 m behind take-off, A at take-off while flying right lands 0.52 m back, keys held lands 3.63 m out.
+- **Guide:** the counter-strafing text and the Rifle stop time row now say about 80 ms counter-strafing and about 106 ms release.
 
 ### Sound rules in force (`player.js`)
 

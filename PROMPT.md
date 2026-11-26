@@ -13,6 +13,16 @@ Investigate any remaining mouse sticking while a player flicks and clicks quickl
 3. Run the **System check** tab and press **Copy report**. It measures polling rate and separates input stalls (mouse still reporting, no `mousemove` reaching the page), movement spikes and frame hitches. If the issue reproduces in a drill, pause right away and open **Input details** for the stall, spike and hitch counts since capture. Use both alongside a physical reproduction to distinguish interrupted capture, missing movement events, and slow rendering.
 4. Fix the confirmed cause, then rerun the failing sequence. Check that the mouse rotates by the expected angle, clicks use the latest aim, capture and resume work, and the three newer drills still score correctly. Report which checks used automation and which used a physical mouse.
 
+## Playtest checklist for branch `system-check-placement`
+
+Run these on the user's PC with a physical mouse, then report which passed.
+
+1. **System check tab:** run it twice, once windowed and once fullscreen, and keep both **Copy report** outputs. A healthy setup shows no stalls and no spikes. If either shows stalls or spikes, that's the lead for the mouse-sticking bug.
+2. **Counter-strafe (~80 ms):** in Counter-Strafe Drill, run at full speed and tap the opposite key. The banner should read about 80 ms for COUNTER-STRAFE and about 106 ms for RELEASE STOP. Ask the user whether stopping feels closer to Valorant than before.
+3. **ADAD Strafe Shooting and Strafing Bots:** confirm the reversal window still feels fair now that it is about 16 ms shorter, and that bots don't look jerky when they reverse.
+4. **Crosshair placement:** in Angle Hold, hold the edge at head height and check that kills show a small "° off" number. Then aim at the floor and check that it shows a large number and "low" height bias in results. In Peek Duels, round banners should show the round's placement.
+5. **Regression:** air strafing, jump peeks with A/D and silent landings should feel exactly as before, since no air values changed.
+
 ## Constraints and references
 
 - Preserve the `0.07° × sensitivity` raw-input turn rate, the separate ADS and sniper scope multipliers, and the user's existing bindings and browser data. Keep the pointer input path independent of ground and air movement. Treat undocumented Valorant movement numbers as estimates.

@@ -3,9 +3,9 @@ export const GUIDE = [
   {
     title: 'Counter-strafing',
     drill: 'counter-strafe',
-    body: 'Valorant rifles have a movement accuracy cutoff at 27.5% of run speed. In StrafeLab, releasing the key from full rifle speed crosses that threshold in about 106 ms. Pressing the opposite key takes about 100 ms. Fire as soon as the speed bar turns green.',
+    body: 'Valorant rifles have a movement accuracy cutoff at 27.5% of run speed. In StrafeLab, pressing the opposite key from full rifle speed crosses that threshold in about 80 ms. Just releasing the key takes about 106 ms. Fire as soon as the speed bar turns green.',
     points: [
-      'Releasing and counter-strafing are almost equally fast in Valorant. Pick one and time it consistently.',
+      'Counter-strafing gets you accurate about 25 ms sooner than releasing. Tap the opposite key, don\'t hold it, or you start moving the other way.',
       'Fire the moment the speed meter turns green. Firing earlier misses, firing later wastes the peek.',
       'The drill tracks every stop: how long it took, and whether you counter-strafed or just released.',
     ],
@@ -112,7 +112,7 @@ export const NUMBERS = [
   ['Rifle damage', 'Head 160 · Body 40 · Legs 34 (150 HP target)', 'wiki'],
   ['Sniper damage', 'Head 255 · Body 150 · Legs 120 · 0.6 shots/s', 'wiki'],
   ['Walk / crouch', '56% / 45% of run speed. Both are silent.', 'est'],
-  ['Rifle stop time', 'From full speed to the 27.5% cutoff: ~106 ms on release, ~100 ms on reversal. Full stop on release: ~160 ms.', 'est'],
+  ['Rifle stop time', 'From full speed to the 27.5% cutoff: ~80 ms counter-strafing (fitted to Range footage showing accurate shots 83 ms after the opposite key), ~106 ms on release. Full stop on release: ~160 ms.', 'est'],
   ['Rifle acceleration', '~0.26 s from standstill to run speed', 'est'],
   ['Enemy bots', 'React in 0.45 / 0.34 / 0.25 s (easy/medium/hard), then rifle taps vs your 150 HP; they hit you less while you move or jump', 'est'],
   ['Air strafing', 'Run before take-off to carry momentum. Slow jumps can build up to 1.8 m/s with directional input.', 'est'],
