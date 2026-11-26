@@ -21,7 +21,7 @@ StrafeLab's movement numbers are partly measured and partly estimated. This plan
 4. **Decide mechanic by mechanic** (jump and air steering are already decided in AimPro's favour by the user's playtest; the recording should confirm or refine them) what to change in StrafeLab's own model: acceleration, stopping, counter-strafe, walk and crouch speeds, jump height and arc, air steering, mid-air reversal, landing slow-down and crouch-jump. Retune using the Valorant measurements. The AimPro numbers are only a comparison and are never copied in.
 5. **Update the guide's reference numbers.** Label each value by where it came from: `wiki`, `measured` (from the recording) or `est`.
 6. **Merge:**
-   - The re-credit is done on `outside-values-test` (`ec0b607`, `f66ab16`). Merge from that history, not from the old `system-check-placement` commits. `origin/system-check-placement` still has the Claude-credited versions until the owner decides on a force-push.
+   - The re-credit is done on `outside-values-test` (`ec0b607`, `f66ab16`). Merge from that history, not from the old `system-check-placement` commits. `origin/system-check-placement` was force-pushed to the re-credited history on 27 Nov 2026.
    - `outside-values-test` stays local until the owner decides whether AimPro-derived jump and air values may go public. If not, retune the same behaviour from the Valorant recording and drop the branch.
    - Every push adds its changes to CONTEXT.md.
 7. **Playtest by hand:** the new drills (Pre-aim Route, Anti-flash), the System check with a real mouse, and the retuned movement.

@@ -151,7 +151,7 @@ In game scripts, set `__sl.net.send = () => false` so test runs don't reach the 
 | Branch | State | What's on it |
 | --- | --- | --- |
 | `main` | Pushed | Everything through `f6ab0ad`. |
-| `system-check-placement` | Pushed up to `37404d4`. `f4dabbb` exists only locally. | System check tab, crosshair-placement scoring, counter-strafe at about 80 ms, and Pre-aim Route and Anti-flash. The pushed commits `9e6c008` and `37404d4` still list Claude as author. Their re-credited copies live on `outside-values-test`, so use that branch, not this one, as the base for merging into `main`. |
+| `system-check-placement` | Pushed, force-pushed on 27 Nov 2026 to `7dc5d04` | System check tab, crosshair-placement scoring, counter-strafe at about 80 ms, and Pre-aim Route and Anti-flash, all credited to Shakan-77 (`ec0b607`, `f66ab16`, `b4952d8`). |
 | `outside-values-test` | Local only. Contains everything on `system-check-placement`, re-credited: `ec0b607` and `f66ab16` replace the Claude-authored `9e6c008` and `37404d4`, with Shakan-77 as author and committer and the Claude trailers removed (same files and dates). | AimPro's jump, air steering and landing are the default (user decision), with StrafeLab's ground movement and silent-jump rules kept. Weapon-scaled acceleration and a knife in every run. Read the next section before pushing or merging. |
 
 ## `outside-values-test`: AimPro's movement numbers
@@ -289,7 +289,7 @@ The owner asked for the commits made by another Claude session to be re-credited
 | Lower jump | `e3832ea` | `192e63c` |
 | Knife and acceleration | `71038d0` | `fb6cf42` |
 
-`origin/system-check-placement` still holds the old, Claude-credited `9e6c008` and `37404d4`. Replacing them on GitHub needs a force-push, which is the owner's decision.
+On 27 Nov 2026 the owner had `origin/system-check-placement` force-pushed to the re-credited `ec0b607`, `f66ab16` and `b4952d8`, plus a CONTEXT.md note (`7dc5d04`). The old Claude-credited commits are gone from GitHub. This branch's AimPro-derived commits were not pushed.
 
 ## Verification and open issues
 
