@@ -89,7 +89,7 @@ These commits follow the user's feedback from playing Valorant. Riot doesn't pub
 - **Guide:** the air-strafing text now describes pulling a jump peek back with the opposite strafe key.
 - **Other findings from the same video, not yet applied:** dead-zoning clips in the Range showed 0.00° movement error on rifle shots fired 83 ms after pressing the opposite key from full speed. StrafeLab needed about 102 ms to reach the accuracy cutoff in the same situation. The user approved shortening it, which is done in the next section.
 
-### System check and crosshair placement (branch `system-check-placement`)
+### `ec0b607`: System check and crosshair placement (branch `system-check-placement`)
 
 Ideas taken from looking at other browser Valorant trainers (valox.gg has a performance check; both it and aimpro.world train crosshair placement). Nothing was copied from them: no code, assets or map layouts.
 
@@ -99,7 +99,7 @@ Ideas taken from looking at other browser Valorant trainers (valox.gg has a perf
 - **Small fixes:** the HP readout no longer shows negative values after a death.
 - **Verified** with a synthetic probe test in Node (clean input, a 120 ms stall, a 400 ms pause, a spike, 8000 Hz polling, scaled values, with and without raw events) and in headless Chrome: the System check end to end with faked pointer lock and a forced 150 ms stall, placement recording in all three drills, and no console errors. A physical-mouse run on the user's setup is still needed.
 
-### Counter-strafe at ~80 ms (branch `system-check-placement`)
+### `f66ab16`: Counter-strafe at ~80 ms (branch `system-check-placement`)
 
 - **Change:** `MOVE.counterExtra` goes from 2.2 to 13 m/s². Pressing the opposite key from full rifle speed now crosses the 27.5% accuracy cutoff in about 78 ms of continuous time, which is 10 physics ticks. Before, it took about 100 ms (13 ticks). Releasing the key is unchanged at about 106 ms, and the full stop on release is still about 160 ms.
 - **Why:** the Radiant video's Range clips showed 0.00° movement error on rifle shots fired 83 ms after the opposite key. A key press lands up to one tick before it takes effect, so a 10-tick crossing makes a typical counter-strafe accurate at 78 to 86 ms after the press.
@@ -107,7 +107,7 @@ Ideas taken from looking at other browser Valorant trainers (valox.gg has a perf
 - **Unchanged:** all air movement. The air checks give the same numbers before and after: W+D drift 0.30 m over 3.61 m, 180° flick or S lands 0.52 m behind take-off, A at take-off while flying right lands 0.52 m back, keys held lands 3.63 m out.
 - **Guide:** the counter-strafing text and the Rifle stop time row now say about 80 ms counter-strafing and about 106 ms release.
 
-### Pre-aim Route and Anti-flash (branch `system-check-placement`, uncommitted)
+### `b4952d8`: Pre-aim Route and Anti-flash (branch `system-check-placement`)
 
 The user pointed at [valox.gg](https://valox.gg) as a reference. It has no public repository: it is a closed-source, ad-supported site whose bundled JavaScript isn't licensed for reuse, so no code or values were taken from it. Its catalogue was used only to find what StrafeLab lacked. ValoX groups its 114 exercises as Pre-aim (83), Angle holding (11), Anti-flash (5) and pro-clip Scenarios (15), and also has an Exercise Studio, a Skill check and a Performance check. StrafeLab already had angle holding and, on this branch, a System check. The two missing training types were built as original drills on original geometry. ValoX's recreations of real Valorant maps and pro clips were not copied (Riot and player content).
 
@@ -119,6 +119,12 @@ The user pointed at [valox.gg](https://valox.gg) as a reference. It has no publi
   - **Anti-flash:** looking at the gap gives a full blind (overlay opacity 1, 1.73 s left). Turning 180° dodges the flash. At 75° off it gives a partial blind (0.65). Turning back after the pop killed three swingers in a row.
   - **Cleanup:** the overlay is gone after quitting.
   - **Not checked:** neither drill has been played by hand yet.
+
+### Re-credit and force-push of `system-check-placement`
+
+The System check and counter-strafe commits were first pushed as `9e6c008` and `37404d4`. They were authored by another Claude session and carried `Co-Authored-By: Claude …` and `Claude-Session:` lines, which `CLAUDE.md` doesn't allow. At the owner's request they were rewritten as `ec0b607` and `f66ab16`, with Shakan-77 as author and committer and those lines removed. The files and commit dates are identical (tree hashes checked). `origin/system-check-placement` was force-pushed with a lease on the old tip, so the old commits are gone from GitHub. Anyone who pulled the old branch should run `git fetch` and `git reset --hard origin/system-check-placement`, or re-create their local branch.
+
+The local-only branch `outside-values-test` builds on these commits. It holds the AimPro-derived movement default, weapon-scaled acceleration and the knife in every run. It isn't pushed, because its movement values come from AimPro's unlicensed client and the owner hasn't decided to publish them. Its own CONTEXT.md and PLAN.md describe that work.
 
 ### Sound rules in force (`player.js`)
 
