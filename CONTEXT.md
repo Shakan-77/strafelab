@@ -230,6 +230,27 @@ The user played both models (default vs `?physics=aimpro`) and judged AimPro's *
 - **Leaderboards:** Air Course and Silent Jumps times set under the old physics aren't directly comparable. Nothing was reset.
 - **Not checked yet:** a hand playtest of the new default, especially Air Course on Hard and Silent Jumps.
 
+### `outside-values-test`, third commit: lower jump, quieter stairs, softer landing
+
+The owner's second playtest found three problems: the jump was a bit too high, walking down the Silent Jumps stairs gave loud landings (0.33 m drops), and moving after a landing felt too heavy.
+
+- **Jump height:** the default apex is now 1.0 m (`MOVE.jumpApex`). It was AimPro's 1.15 m. Air time stays 0.675 s (`MOVE.jumpAirTime`), so gravity becomes 17.56 m/s² and launch speed 5.93 m/s, and running-jump distance is unchanged (3.63 m with a rifle, 4.54 m with the knife). A crouch-jump now reaches about 1.18 m. Gravity and launch come from `player.gravity` and `player.launchSpeed()`. `?physics=aimpro` keeps AimPro's original 1.15 m.
+- **Landing slow-down:** the default keeps 60% of AimPro's dip (`MOVE.landSlowScale` = 0.6). After a full jump your speed now bottoms out at about 74% (4.0 of 5.4 m/s), where it was 50%, and it still recovers by 0.5 s. The dip is measured against a fall the size of a full jump at the current jump height (`aimproLandSlow(t, fall, fullFall)`). `?physics=aimpro` keeps the full dip.
+- **Silent Jumps:**
+  - **Ledges:** 1.03 / 1.07 / 1.11 m (easy, medium, hard), capped at 1.15 m. That's above the 0.98 m normal jump and below the 1.18 m crouch-jump.
+  - **Stairs:** the steps down the far side now have 5 drops of at most 0.23 m, where there were 4 drops of up to 0.33 m. They're well under the 0.31 m loud-landing fall, so walking down is silent. Ledge spacing grows to fit the extra steps.
+- **Verified by simulation:**
+
+  | Check | Result |
+  | --- | --- |
+  | Running jump | 0.98 m apex, 0.672 s in the air, 3.63 m |
+  | Plain jump onto a 1.03 m ledge | Fails |
+  | Crouch-jump onto 1.03 or 1.15 m ledges | Lands silently |
+  | Walking down 5 steps from a 1.15 m ledge | Five 0.24 m falls, all silent. Running down is still loud. |
+  | Crouch-release on flat ground | Silent |
+  | Walk jump on flat ground | Loud, as before |
+  | Speed after a full jump | 5.4 → 4.14 m/s at 47 ms, 4.02 m/s at 0.1 to 0.2 s, 4.84 m/s at 0.4 s, back to 5.4 m/s at 0.5 s |
+
 - **What the first comparison said (before the user's decision):** the two models agree closely on ground stopping. They disagree on air control: AimPro is classic Quake/CS strafing, where turning with W does nothing, strafe plus mouse gains speed, and opposite keys only stop you. StrafeLab matches the user's own Valorant observations: W plus the camera steers, you gain no speed, and a 180° turn carries you about 0.5 m behind. Use the Valorant Range recording in [PLAN.md](PLAN.md) to decide each mechanic. Don't take either model on trust.
 
 ## Verification and open issues

@@ -85,5 +85,5 @@ StrafeLab's movement numbers are partly measured and partly estimated. This plan
 
 - **Air steering:** the user's playtest favours AimPro's Quake-style steering (strafe key plus mouse). Tests 16 to 20 confirm it and refine the 0.75 m/s cap and the 0.45 air control.
 - **Mid-air reversal:** does it carry you behind take-off (StrafeLab, about 0.5 m) or just stop you (AimPro)? Tests 21 to 23 settle it.
-- **Jump apex:** now about 1.15 m (AimPro). Tests 10 and 13 confirm it, along with the crouch-jump reach (1.37 m) and the Silent Jumps ledge heights.
-- **Landing slow-down:** is there a speed dip after landing, separate from the +7° accuracy penalty? Tests 11 and 24 settle it.
+- **Jump apex:** now 1.0 m (AimPro's 1.15 m felt too high in playtest). Tests 10 and 13 confirm it, along with the crouch-jump reach (about 1.2 m) and the Silent Jumps ledge heights (1.03 to 1.15 m).
+- **Landing slow-down:** now 60% of AimPro's dip (about 75% speed at worst, from playtest). Tests 11 and 24 measure the real dip, separate from the +7° accuracy penalty.

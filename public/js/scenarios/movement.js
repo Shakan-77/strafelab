@@ -666,8 +666,8 @@ export class SilentJumps extends TimeTrial {
   constructor(...a) {
     super(...a);
     this.noiseFeedback = true;
-    // above a normal jump (feet apex ~1.12 m), below a crouch-jump (~1.37 m with the 0.25 m tuck)
-    this.base = this.d({ easy: 1.17, medium: 1.22, hard: 1.27 });
+    // above a normal jump (feet apex ~1.0 m), below a crouch-jump (~1.2 m: 0.95 m crouched launch + 0.25 m tuck)
+    this.base = this.d({ easy: 1.03, medium: 1.07, hard: 1.11 });
     this.count = 6;
     this.ledgeZ = [];
     this.landings = 0;
@@ -686,12 +686,16 @@ export class SilentJumps extends TimeTrial {
     const H = 4;
     const vary = [0, 0.03, -0.02, 0.04, 0.01, 0.03];
     let z = -6;
+    // stairs down the far side: each step drops at most h / STEPS (≤ 0.23 m), well under the
+    // 0.31 m loud-landing fall, so walking down them is always silent
+    const STEPS = 5;
+    const STEP_D = 0.8;
     for (let i = 0; i < this.count; i++) {
-      const h = Math.min(1.31, this.base + vary[i]);
+      const h = Math.min(1.15, this.base + vary[i]);
       this.ledgeZ.push(z);
       w.box([-W, 0, z - 3], [W, h, z], { mat: 'platform' });
-      for (let s = 1; s <= 3; s++) w.box([-W, 0, z - 3 - 0.9 * s], [W, h * (1 - s / 4), z - 3 - 0.9 * (s - 1)], { mat: 'cover' });
-      z -= 3 + 2.7 + 4.5;
+      for (let s = 1; s < STEPS; s++) w.box([-W, 0, z - 3 - STEP_D * s], [W, h * (1 - s / STEPS), z - 3 - STEP_D * (s - 1)], { mat: 'cover' });
+      z -= 3 + STEP_D * (STEPS - 1) + 4.5;
     }
     const end = z - 4;
     floor(w, -20, 20, end - 10, 12);

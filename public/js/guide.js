@@ -23,7 +23,7 @@ export const GUIDE = [
   {
     title: 'Air strafing',
     drill: 'air-course',
-    body: 'A running jump carries your take-off momentum, and the jump reaches about 1.15 m. In the air you steer with a strafe key and the mouse together: hold D and sweep the mouse right to curve right. Holding W while you turn barely bends your path, and keys alone only nudge it (W+D drifts about 0.3 m on a full-speed jump). Strafing into a turn can even add a little speed. Pressing against your motion (S on a forward jump, or A while flying right) quickly bleeds your speed down to a crawl, which is how a jump peek stops short of the open. Landing slows you for about half a second. The jump, air and landing values follow AimPro\'s model and are not Riot numbers.',
+    body: 'A running jump carries your take-off momentum, and the jump reaches about 1 m. In the air you steer with a strafe key and the mouse together: hold D and sweep the mouse right to curve right. Holding W while you turn barely bends your path, and keys alone only nudge it (W+D drifts about 0.3 m on a full-speed jump). Strafing into a turn can even add a little speed. Pressing against your motion (S on a forward jump, or A while flying right) quickly bleeds your speed down to a crawl, which is how a jump peek stops short of the open. Landing slows you a little for about half a second. Air steering follows AimPro\'s model, with the jump height and landing slow-down retuned by playtest. None of these are Riot numbers.',
     points: [
       'Curve right: release W, hold D, sweep the mouse right smoothly. Curve left with A and the mouse left.',
       'Turning with W held does almost nothing in the air. Use the strafe key on the side you are turning to.',
@@ -137,12 +137,12 @@ export const NUMBERS = [
   ['Rifle acceleration', '~0.26 s from standstill to run speed', 'est'],
   ['Enemy bots', 'React in 0.45 / 0.34 / 0.25 s (easy/medium/hard), then rifle taps vs your 150 HP; they hit you less while you move or jump', 'est'],
   ['Air strafing', 'Steer with strafe key + mouse; air speed along your keys is capped at 0.75 m/s (Quake-style), half accel when pushing 150°+ against your path (AimPro model)', 'est'],
-  ['Jump', '~1.15 m apex, ~0.675 s in the air (AimPro model)', 'est'],
-  ['Crouch-jump', 'Crouching in the air lifts your feet 0.25 m (reach ~1.37 m)', 'est'],
+  ['Jump', '~1.0 m apex, ~0.675 s in the air (AimPro shape, retuned by playtest)', 'est'],
+  ['Crouch-jump', 'Crouching in the air lifts your feet 0.25 m (reach ~1.2 m)', 'est'],
   ['Quiet speed', 'Up to 108% of walking speed (3.27 m/s with a rifle). Faster than this, footsteps start.', 'est'],
   ['Silent jump', 'Walk or Crouch held at take-off, at any speed. Otherwise the jump is heard.', 'est'],
   ['Silent landing', 'Walk or Crouch held and landing higher than take-off (any speed), or a fall of ~0.3 m or less at quiet speed', 'est'],
-  ['Landing slow', 'For 0.5 s after a fall over 0.05 m your speed limit dips (to 50% after a full jump) and recovers (AimPro model)', 'est'],
+  ['Landing slow', 'For 0.5 s after a fall over 0.05 m your speed limit dips (to about 75% after a full jump) and recovers (AimPro curve, softened by playtest)', 'est'],
   ['Air drift', 'Full-speed jump holding W+D drifts ~0.3 m sideways (~1/12 of the jump)', 'est'],
   ['Tick rate', 'Physics simulated at 128 Hz', 'wiki'],
 ];

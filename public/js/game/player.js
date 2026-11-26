@@ -29,13 +29,14 @@ export const PHYSICS = (() => {
  *   Range footage of a Radiant player with 0.00° movement error 83 ms after the opposite key.
  *   Unreal-style braking: dv/dt = -(brakeFriction·v + brakeDecel)
  * - jump, air and landing (default since branch outside-values-test, from AimPro's model in
- *   physics-aimpro.js): apex ~1.15 m over ~0.675 s; Quake-style air control where you steer with a
+ *   physics-aimpro.js), retuned by playtest: apex ~1.0 m over ~0.675 s (AimPro: 1.15 m); Quake-style air control where you steer with a
  *   strafe key plus the mouse (W alone barely bends your path), speed along your keys capped at
- *   0.75 m/s, half accel when pushing against your path; a speed dip for 0.5 s after landing.
+ *   0.75 m/s, half accel when pushing against your path; a speed dip for 0.5 s after landing
+ *   (60% of AimPro's: down to ~75% speed after a full jump).
  *   ?physics=classic restores StrafeLab's previous air model (camera-follow steering, mid-air
  *   reversal that carries you ~0.5 m behind take-off), below in the `classic` branch of step().
  * - crouch-jump: crouching in the air (or jumping while crouched) tucks your legs up, so your
- *   feet clear ledges a normal jump can't (~1.37 m instead of ~1.12 m)
+ *   feet clear ledges a normal jump can't (~1.2 m instead of ~1.0 m)
  * - one "quiet speed" (just above walking speed): faster than it, footsteps start
  * - silent jump: the take-off is silent whenever Walk or Crouch is held (at any speed); otherwise heard
  * - silent landing: landing makes noise if you hit the ground hard (fell more than ~0.3 m from
@@ -47,6 +48,12 @@ export const MOVE = {
   tagTime: 0.5, // estimate
   tuckLift: 0.25,
   silentLandFall: 0.31, // m: a landing that fell further than this is heard (3.2 m/s impact at g = 16.5)
+  // Default physics: AimPro's jump shape and air steering, retuned by the owner's playtest.
+  // AimPro's 1.15 m apex felt too high; same 0.675 s air time, so running-jump distance is unchanged.
+  jumpApex: 1.0, // m
+  jumpAirTime: 0.675, // s
+  // AimPro's landing slow-down felt too strong: keep 60% of its dip (50% → 70% speed at worst)
+  landSlowScale: 0.6,
   quietMult: 1.08, // × walk speed: above this, footsteps / jumps / landings are heard
   accel: 20.8, // estimated ~0.26 s from standstill to rifle run speed
   brakeFriction: 3.77, // 1/s  } fitted so 5.4 m/s → 25% in ~110 ms, full stop in ~160 ms
@@ -125,7 +132,23 @@ export class Player {
   }
 
   get gravity() {
-    return this.airModel === 'aimpro' ? AIMPRO_GRAVITY : MOVE.gravity;
+    if (this.model === 'aimpro') return AIMPRO_GRAVITY;
+    if (this.airModel === 'aimpro') return (8 * MOVE.jumpApex) / MOVE.jumpAirTime ** 2;
+    return MOVE.gravity;
+  }
+
+  /** Jump launch speed for the current model (crouched jumps launch slightly lower). */
+  launchSpeed() {
+    if (this.airModel !== 'aimpro') return MOVE.jumpVel;
+    const v = this.model === 'aimpro' ? AIMPRO_LAUNCH : (4 * MOVE.jumpApex) / MOVE.jumpAirTime;
+    return v * (this.crouched ? AIMPRO.jump.crouchHop : 1);
+  }
+
+  /** Speed multiplier from the post-landing slow-down. */
+  landSlowMult() {
+    if (this.airModel !== 'aimpro') return 1;
+    const m = aimproLandSlow(this.sinceLand, this.lastFall, this.model === 'aimpro' ? AIMPRO.jump.maxHeight : MOVE.jumpApex);
+    return this.model === 'aimpro' ? m : 1 + (m - 1) * MOVE.landSlowScale;
   }
 
   /** Impact speed above which a landing is heard: a fall of more than silentLandFall at this gravity. */
@@ -326,7 +349,7 @@ export class Player {
     if (this.tagT > 0) this.tagT -= dt;
     this.sinceLand += dt;
     if (this.onGround && this.jumpBuffer > 0 && !locked && this.allowJump) {
-      this.vel.y = this.airModel === 'aimpro' ? AIMPRO_LAUNCH * (this.crouched ? AIMPRO.jump.crouchHop : 1) : MOVE.jumpVel;
+      this.vel.y = this.launchSpeed();
       this.onGround = false;
       this.jumpBuffer = 0;
       this.uncrouchedMidAir = false;
@@ -347,7 +370,7 @@ export class Player {
     // AimPro's model (physics-aimpro.js): weapon speed scales its knife-speed base values
     const k = (this.runSpeed * this.speedMult * this.tagMult()) / AIMPRO.base.maxSpeed;
     // speed dip for half a second after landing (AimPro air model)
-    const landSlow = this.airModel === 'aimpro' ? aimproLandSlow(this.sinceLand, this.lastFall) : 1;
+    const landSlow = this.landSlowMult();
     if (this.onGround && this.groundModel === 'aimpro') {
       const stance = this.crouched ? 'crouch' : inp.walk ? 'walk' : 'run';
       [vx, vz] = aimproGround(vx, vz, wx, wz, wishSpeed > 0, stance, k, dt, landSlow);

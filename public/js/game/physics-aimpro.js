@@ -126,10 +126,10 @@ export function aimproAir(vx, vz, wx, wz, hasInput, fwd, side, k, dt) {
 }
 
 /** Speed multiplier `t` seconds after a landing that fell `fall` metres. */
-export function aimproLandSlow(t, fall) {
+export function aimproLandSlow(t, fall, fullFall = J.maxHeight) {
   const L = AIMPRO.landSlow;
   if (fall <= L.minFall || t < 0 || t >= L.duration) return 1;
-  const intensity = Math.min(1, fall / J.maxHeight);
+  const intensity = Math.min(1, fall / fullFall);
   const u = t / L.duration;
   const c = L.curve;
   let m = 1;
