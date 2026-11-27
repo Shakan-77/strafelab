@@ -295,6 +295,12 @@ On 27 Nov 2026 the owner had `origin/system-check-placement` force-pushed to the
 
 At the owner's request, the local branch `outside-values-test` was renamed `latest-version` and pushed to GitHub as the latest version of StrafeLab. It holds every commit from `system-check-placement` (re-credited), then the AimPro profile, the AimPro-style default jump and air steering, the playtest retune (1.0 m jump, softer landing, quiet stairs), weapon-scaled acceleration and the knife in every run. Restart `server.py` after pulling: `scenarios.json` has 18 drills.
 
+### Fix: guide syntax error that stopped the page loading
+
+The "Acceleration" reference row added in `fb6cf42` had an unescaped apostrophe (`weapon's`) inside a single-quoted string in `public/js/guide.js`. The whole page failed to load with `SyntaxError: Unexpected identifier 's'`, so `latest-version` as first pushed (`f09e9ec`) did not run. This commit escapes it (`weapon\'s`). The cause was editing JS through a Python heredoc in Git Bash, which drops backslashes. Use the Edit tool or check for console errors after scripted edits to JS strings.
+
+- **Verified:** after the fix, all 18 drills on Hard were run by script in the debug page. Each run moved, jumped, fired, swapped to the knife and back, then finished. There were no page errors, and no NaN, undefined or Infinity values in any HUD or results row.
+
 ## Verification and open issues
 
 Chrome automation verified mouse look while strafing and jumping in fullscreen, pause and resume after capture loss, the 360° turn calculation, separate ADS and scope settings, and 30 consecutive Grid Taps hits with four reused targets. Earlier browser checks also covered all 15 drill starts, the three new leaderboards, old local history entries, and a party start for Strafe Tracking.
